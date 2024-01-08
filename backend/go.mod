@@ -174,7 +174,7 @@ require (
 	github.com/eko/gocache/store/freecache/v4 v4.2.1 // indirect
 	github.com/eko/gocache/store/redis/v4 v4.2.1 // indirect
 	github.com/go-micro/plugins/v4/broker/memory v1.2.0 // indirect
-	github.com/go-resty/resty/v2 v2.10.0
+	github.com/go-resty/resty/v2 v2.11.0
 	github.com/golang-jwt/jwt/v5 v5.1.0
 	github.com/hibiken/asynq v0.24.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
