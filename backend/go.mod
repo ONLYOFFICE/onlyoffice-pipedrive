@@ -1,6 +1,6 @@
 module github.com/ONLYOFFICE/onlyoffice-pipedrive
 
-go 1.19
+go 1.22.0
 
 require (
 	github.com/ONLYOFFICE/onlyoffice-integration-adapters v0.1.2
@@ -30,7 +30,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/chenzhuoyu/iasm v0.9.1 // indirect
-	github.com/cloudflare/circl v1.3.6 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
