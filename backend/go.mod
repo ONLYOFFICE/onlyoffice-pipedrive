@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/ONLYOFFICE/onlyoffice-integration-adapters v0.1.2
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sethvargo/go-envconfig v0.9.0
 	github.com/stretchr/testify v1.8.4
