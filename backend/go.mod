@@ -1,6 +1,6 @@
 module github.com/ONLYOFFICE/onlyoffice-pipedrive
 
-go 1.19
+go 1.23.0
 
 require (
 	github.com/ONLYOFFICE/onlyoffice-integration-adapters v0.1.2
@@ -157,7 +157,6 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.4.0 // indirect
 	golang.org/x/tools v0.15.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231106174013-bbf56f31fb17 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect
@@ -185,5 +184,5 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
-	golang.org/x/oauth2 v0.14.0
+	golang.org/x/oauth2 v0.27.0
 )
