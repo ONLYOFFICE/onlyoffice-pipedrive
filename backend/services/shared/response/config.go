@@ -67,6 +67,14 @@ type EditorConfig struct {
 	CallbackURL   string        `json:"callbackUrl"`
 	Customization Customization `json:"customization"`
 	Lang          string        `json:"lang,omitempty"`
+	Plugins       Plugins       `json:"plugins"`
+}
+
+type Plugins struct {
+	Autostart   []string       `json:"autostart,omitempty"`
+	Options     map[string]any `json:"options"`
+	PluginsData []string       `json:"pluginsData,omitempty"`
+	Url         string         `json:"url,omitempty"`
 }
 
 type User struct {

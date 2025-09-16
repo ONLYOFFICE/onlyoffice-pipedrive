@@ -60,6 +60,37 @@ func NewPipedriveApiClient() PipedriveApiClient {
 	}
 }
 
+func (p *PipedriveApiClient) GetDeal(ctx context.Context, id string, token model.Token) (model.Deal, error) {
+	var deal model.Deal
+	var resp model.DealResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/deals/%s", token.ApiDomain, id))
+
+	if err != nil {
+		return deal, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return deal, &UnexpectedStatusCodeError{
+			Action: "get deal",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	if !resp.Success {
+		return deal, &UnexpectedStatusCodeError{
+			Action: "get deal",
+			Code:   http.StatusInternalServerError,
+		}
+	}
+
+	return resp.Data, nil
+}
+
 func (p *PipedriveApiClient) GetMe(ctx context.Context, token model.Token) (model.User, error) {
 	var usr model.User
 	var resp interface{}
