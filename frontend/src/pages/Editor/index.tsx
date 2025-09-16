@@ -136,6 +136,7 @@ export const OnlyofficeEditorPage: React.FC = () => {
                   hideRightMenu: data.editorConfig.customization.hideRightMenu,
                   plugins: data.editorConfig.customization.plugins,
                 },
+                plugins: data.editorConfig.plugins,
               },
               token: data.token,
               type: data.type,

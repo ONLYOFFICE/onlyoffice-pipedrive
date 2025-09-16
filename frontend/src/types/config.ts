@@ -58,6 +58,14 @@ type EditorConfig = {
   callbackUrl: string;
   customization: Customization;
   lang: string;
+  plugins: Plugins;
+};
+
+type Plugins = {
+  autostart: string[];
+  options: any;
+  pluginsData: string[];
+  url: string;
 };
 
 export type ConfigResponse = {
