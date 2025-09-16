@@ -48,6 +48,8 @@ type ApiController struct {
 	commandClient pclient.CommandClient
 	jwtManager    crypto.JwtManager
 	config        *config.ServerConfig
+	userCache     map[string]model.User
+	dealCache     map[string]model.Deal
 	logger        log.Logger
 }
 
@@ -66,6 +68,8 @@ func NewApiController(
 		jwtManager:    jwtManager,
 		config:        serverConfig,
 		logger:        logger,
+		userCache:     make(map[string]model.User),
+		dealCache:     make(map[string]model.Deal),
 	}
 }
 
@@ -112,6 +116,53 @@ func (c ApiController) BuildGetMe() http.HandlerFunc {
 			AccessToken: ures.AccessToken,
 			ExpiresAt:   ures.ExpiresAt,
 		}.ToJSON())
+	}
+}
+
+type Data struct {
+	Data any    `json:"data"`
+	Code string `json:"code"`
+}
+
+func (c ApiController) BuildGetData() http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		usr, ok := c.userCache[code]
+		if !ok {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		deal, ok := c.dealCache[code]
+		if !ok {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		data, err := json.Marshal(Data{
+			Data: map[string]any{
+				"user": usr,
+				"deal": deal,
+			},
+			Code: code,
+		})
+
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		delete(c.userCache, code)
+		delete(c.dealCache, code)
+		c.userCache["1111"] = usr
+		c.dealCache["1111"] = deal
+
+		rw.Write(data)
 	}
 }
 
@@ -357,6 +408,44 @@ func (c ApiController) BuildGetConfig() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
 		defer cancel()
 
+		ures, status, _ := c.getUser(ctx, fmt.Sprint(pctx.UID+pctx.CID))
+		if status != http.StatusOK {
+			rw.WriteHeader(status)
+			return
+		}
+
+		urs, err := c.apiClient.GetMe(ctx, model.Token{
+			AccessToken:  ures.AccessToken,
+			RefreshToken: ures.RefreshToken,
+			TokenType:    ures.TokenType,
+			Scope:        ures.Scope,
+			ApiDomain:    ures.ApiDomain,
+		})
+
+		if err != nil {
+			c.logger.Errorf("could not get pipedrive user or no user has admin permissions: %s", err.Error())
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		deal, err := c.apiClient.GetDeal(ctx, dealID, model.Token{
+			AccessToken:  ures.AccessToken,
+			RefreshToken: ures.RefreshToken,
+			TokenType:    ures.TokenType,
+			Scope:        ures.Scope,
+			ApiDomain:    ures.ApiDomain,
+		})
+
+		if err != nil {
+			c.logger.Errorf("could not get pipedrive deal: %s", err.Error())
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		code := "1111"
+		c.userCache[code] = urs
+		c.dealCache[code] = deal
+
 		var resp response.BuildConfigResponse
 		if err := c.client.Call(
 			ctx,
@@ -372,6 +461,7 @@ func (c ApiController) BuildGetConfig() http.HandlerFunc {
 					FileID:    id,
 					DocKey:    key,
 					Dark:      dark,
+					Code:      code,
 				},
 			),
 			&resp,

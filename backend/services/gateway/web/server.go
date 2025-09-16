@@ -89,13 +89,16 @@ func (s *PipedriveHTTPService) InitializeRoutes() {
 		})
 
 		r.Route("/api", func(cr chi.Router) {
-			cr.Use(func(h http.Handler) http.Handler {
-				return s.contextMiddleware.Protect(h)
+			cr.Get("/data", s.apiController.BuildGetData())
+			cr.Group(func(pr chi.Router) {
+				pr.Use(func(h http.Handler) http.Handler {
+					return s.contextMiddleware.Protect(h)
+				})
+				pr.Get("/me", s.apiController.BuildGetMe())
+				pr.Get("/config", s.apiController.BuildGetConfig())
+				pr.Post("/settings", s.apiController.BuildPostSettings())
+				pr.Get("/settings", s.apiController.BuildGetSettings())
 			})
-			cr.Get("/me", s.apiController.BuildGetMe())
-			cr.Get("/config", s.apiController.BuildGetConfig())
-			cr.Post("/settings", s.apiController.BuildPostSettings())
-			cr.Get("/settings", s.apiController.BuildGetSettings())
 		})
 
 		r.Route("/files", func(fr chi.Router) {
