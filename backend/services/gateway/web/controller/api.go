@@ -231,28 +231,68 @@ func (c *ApiController) BuildGetData() http.HandlerFunc {
 			return
 		}
 
-		ures, _, err := c.getUser(ctx, fmt.Sprint(data.UserID))
-		if err != nil {
-			c.writeErrorResponse(rw, http.StatusBadRequest)
+		var (
+			ures  response.UserResponse
+			user  model.User
+			deal  model.Deal
+			nCode string
+		)
+
+		eg, ectx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			var status int
+			var err error
+			ures, status, err = c.getUser(ectx, fmt.Sprint(data.UserID))
+			if err != nil {
+				c.logger.Errorf("failed to get user: %s", err.Error())
+				return err
+			}
+			if status != http.StatusOK {
+				return fmt.Errorf("user fetch failed with status: %d", status)
+			}
+			return nil
+		})
+
+		eg.Go(func() error {
+			var err error
+			nCode, err = c.regenerateAccess(ectx, fmt.Sprint(data.UserID), data.DealID)
+			if err != nil {
+				c.logger.Errorf("failed to regenerate access: %s", err.Error())
+				return err
+			}
+			return nil
+		})
+
+		if err := eg.Wait(); err != nil {
+			c.writeErrorResponse(rw, http.StatusInternalServerError)
 			return
 		}
 
 		token := c.createToken(ures)
-		user, err := c.apiClient.GetMe(ctx, token)
-		if err != nil {
-			c.writeErrorResponse(rw, http.StatusBadRequest)
-			return
-		}
+		eg, ectx = errgroup.WithContext(ctx)
 
-		deal, err := c.apiClient.GetDeal(ctx, fmt.Sprint(data.DealID), token)
-		if err != nil {
-			c.writeErrorResponse(rw, http.StatusBadRequest)
-			return
-		}
+		eg.Go(func() error {
+			var err error
+			user, err = c.apiClient.GetMe(ectx, token)
+			if err != nil {
+				c.logger.Errorf("failed to get user details: %s", err.Error())
+				return err
+			}
+			return nil
+		})
 
-		nCode, err := c.regenerateAccess(ctx, fmt.Sprint(data.UserID), data.DealID)
-		if err != nil {
-			c.writeErrorResponse(rw, http.StatusInternalServerError)
+		eg.Go(func() error {
+			var err error
+			deal, err = c.apiClient.GetDeal(ectx, fmt.Sprint(data.DealID), token)
+			if err != nil {
+				c.logger.Errorf("failed to get deal: %s", err.Error())
+				return err
+			}
+			return nil
+		})
+
+		if err := eg.Wait(); err != nil {
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
@@ -393,35 +433,56 @@ func (c *ApiController) BuildGetSettings() http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := c.createTimeoutContext(r, 3*time.Second)
+		ctx, cancel := c.createTimeoutContext(r, 5*time.Second)
 		defer cancel()
 
-		ures, status, _ := c.getUser(ctx, c.getUserID(pctx))
-		if status != http.StatusOK {
-			c.writeErrorResponse(rw, status)
-			return
-		}
-
-		token := c.createToken(ures)
-		if err := c.validateUserAccess(ctx, token); err != nil {
-			c.writeErrorResponse(rw, http.StatusForbidden)
-			return
-		}
-
-		var docs response.DocSettingsResponse
-		err := c.client.Call(
-			ctx,
-			c.client.NewRequest(
-				fmt.Sprintf("%s:settings", c.config.Namespace),
-				"SettingsSelectHandler.GetSettings",
-				fmt.Sprint(pctx.CID),
-			),
-			&docs,
+		var (
+			ures response.UserResponse
+			docs response.DocSettingsResponse
 		)
 
-		if err != nil {
-			c.logger.Errorf("could not get settings: %s", err.Error())
-			c.handleMicroError(err, rw, http.StatusUnauthorized)
+		eg, ectx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			var status int
+			var err error
+			ures, status, err = c.getUser(ectx, c.getUserID(pctx))
+			if err != nil {
+				return err
+			}
+			if status != http.StatusOK {
+				return fmt.Errorf("user fetch failed with status: %d", status)
+			}
+
+			token := c.createToken(ures)
+			if err := c.validateUserAccess(ectx, token); err != nil {
+				return err
+			}
+			return nil
+		})
+
+		eg.Go(func() error {
+			err := c.client.Call(
+				ectx,
+				c.client.NewRequest(
+					fmt.Sprintf("%s:settings", c.config.Namespace),
+					"SettingsSelectHandler.GetSettings",
+					fmt.Sprint(pctx.CID),
+				),
+				&docs,
+			)
+			if err != nil {
+				c.logger.Errorf("could not get settings: %s", err.Error())
+				return err
+			}
+			return nil
+		})
+
+		if err := eg.Wait(); err != nil {
+			if errors.Is(err, ErrNotAdmin) {
+				c.writeErrorResponse(rw, http.StatusForbidden)
+			} else {
+				c.handleMicroError(err, rw, http.StatusUnauthorized)
+			}
 			return
 		}
 
@@ -465,43 +526,60 @@ func (c *ApiController) BuildGetConfig() http.HandlerFunc {
 		ctx, cancel := c.createTimeoutContext(r, 6*time.Second)
 		defer cancel()
 
-		code := uuid.New().String()
-		access := domain.AICodeAccess{
-			Code:   code,
-			UserID: c.getUserID(pctx),
-			DealID: dealID,
-		}
-
-		if err := c.accessService.UpsertCodeAccess(ctx, access); err != nil {
-			c.logger.Errorf("could not store AI access code: %s", err.Error())
-			c.writeErrorResponse(rw, http.StatusInternalServerError)
-			return
-		}
-
-		var resp response.BuildConfigResponse
-		err := c.client.Call(
-			ctx,
-			c.client.NewRequest(
-				fmt.Sprintf("%s:builder", c.config.Namespace),
-				"ConfigHandler.BuildConfig",
-				request.BuildConfigRequest{
-					UID:       pctx.UID,
-					CID:       pctx.CID,
-					Deal:      dealID,
-					UserAgent: r.UserAgent(),
-					Filename:  filename,
-					FileID:    id,
-					DocKey:    key,
-					Dark:      dark,
-					Code:      code,
-				},
-			),
-			&resp,
+		var (
+			resp response.BuildConfigResponse
 		)
 
-		if err != nil {
-			c.logger.Errorf("could not build onlyoffice config: %s", err.Error())
-			c.handleMicroError(err, rw, http.StatusInternalServerError)
+		eg, ectx := errgroup.WithContext(ctx)
+		code := uuid.New().String()
+
+		eg.Go(func() error {
+			access := domain.AICodeAccess{
+				Code:   code,
+				UserID: c.getUserID(pctx),
+				DealID: dealID,
+			}
+
+			if err := c.accessService.UpsertCodeAccess(ectx, access); err != nil {
+				c.logger.Errorf("could not store AI access code: %s", err.Error())
+				return err
+			}
+			return nil
+		})
+
+		eg.Go(func() error {
+			err := c.client.Call(
+				ectx,
+				c.client.NewRequest(
+					fmt.Sprintf("%s:builder", c.config.Namespace),
+					"ConfigHandler.BuildConfig",
+					request.BuildConfigRequest{
+						UID:       pctx.UID,
+						CID:       pctx.CID,
+						Deal:      dealID,
+						UserAgent: r.UserAgent(),
+						Filename:  filename,
+						FileID:    id,
+						DocKey:    key,
+						Dark:      dark,
+						Code:      code,
+					},
+				),
+				&resp,
+			)
+			if err != nil {
+				c.logger.Errorf("could not build onlyoffice config: %s", err.Error())
+				return err
+			}
+			return nil
+		})
+
+		if err := eg.Wait(); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+				c.writeErrorResponse(rw, http.StatusRequestTimeout)
+			} else {
+				c.handleMicroError(err, rw, http.StatusInternalServerError)
+			}
 			return
 		}
 
