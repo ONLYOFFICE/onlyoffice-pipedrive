@@ -23,6 +23,8 @@ import (
 	chttp "github.com/ONLYOFFICE/onlyoffice-integration-adapters/service/http"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/controller"
+	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/adapter"
+	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/service"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/middleware"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/client"
@@ -48,6 +50,8 @@ func Server() *cli.Command {
 
 			app := pkg.NewBootstrapper(CONFIG_PATH, pkg.WithModules(
 				chttp.NewService, web.NewServer,
+				adapter.BuildNewAICodeAccessAdapter,
+				service.NewAIAccessService,
 				controller.NewApiController,
 				controller.NewAuthController,
 				controller.NewFileController,
