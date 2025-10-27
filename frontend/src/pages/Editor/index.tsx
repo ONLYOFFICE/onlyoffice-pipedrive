@@ -32,6 +32,12 @@ import { getFileFavicon } from "@utils/file";
 
 import Icon from "@assets/nofile.svg";
 
+declare global {
+  interface Window {
+    connector: any;
+  }
+}
+
 const onEditor = () => {
   const loader = document.getElementById("eloader");
   if (loader) {
@@ -149,6 +155,10 @@ export const OnlyofficeEditorPage: React.FC = () => {
                   onEditor();
                 },
                 onWarning: onEditor,
+                onDocumentReady: (event: any) => {
+                  const connector = window.DocEditor.instances["docxEditor"].createConnector();
+                  window.connector = connector;
+                },
               },
             }}
           />
