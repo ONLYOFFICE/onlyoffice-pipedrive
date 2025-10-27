@@ -136,9 +136,13 @@ func BuildNewOnlyofficeConfig(path string) func() (*OnlyofficeConfig, error) {
 }
 
 type OnlyofficeBuilderConfig struct {
-	GatewayURL       string `yaml:"gateway_url" env:"ONLYOFFICE_GATEWAY_URL,overwrite"`
-	CallbackURL      string `yaml:"callback_url" env:"ONLYOFFICE_CALLBACK_URL,overwrite"`
-	AllowedDownloads int    `yaml:"allowed_downloads" env:"ONLYOFFICE_ALLOWED_DOWNLOADS,overwrite"`
+	GatewayURL         string `yaml:"gateway_url" env:"ONLYOFFICE_GATEWAY_URL,overwrite"`
+	CallbackURL        string `yaml:"callback_url" env:"ONLYOFFICE_CALLBACK_URL,overwrite"`
+	AllowedDownloads   int    `yaml:"allowed_downloads" env:"ONLYOFFICE_ALLOWED_DOWNLOADS,overwrite"`
+	PluginGUID         string `yaml:"plugin_guid" env:"ONLYOFFICE_PLUGIN_GUID,overwrite"`
+	AutofillerURL      string `yaml:"autofiller_url" env:"ONLYOFFICE_AUTOFILLER_URL,overwrite"`
+	AutofillerConfig   string `yaml:"autofiller_config" env:"ONLYOFFICE_AUTOFILLER_CONFIG,overwrite"`
+	AutofillerCallback string `yaml:"autofiller_callback" env:"ONLYOFFICE_AUTOFILLER_CALLBACK,overwrite"`
 }
 
 func (oc *OnlyofficeBuilderConfig) Validate() error {
