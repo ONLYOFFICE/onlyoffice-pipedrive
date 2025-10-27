@@ -214,6 +214,125 @@ func (c *ApiController) BuildGetMe() http.HandlerFunc {
 	}
 }
 
+func (c *ApiController) fetchUserWithCode(ctx context.Context, userID, dealID string) (response.UserResponse, string, error) {
+	var (
+		ures response.UserResponse
+		code string
+	)
+
+	eg, ectx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var status int
+		var err error
+		ures, status, err = c.getUser(ectx, userID)
+		if err != nil {
+			c.logger.Errorf("failed to get user: %s", err.Error())
+			return err
+		}
+		if status != http.StatusOK {
+			return fmt.Errorf("user fetch failed with status: %d", status)
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		code, err = c.regenerateAccess(ectx, userID, dealID)
+		if err != nil {
+			c.logger.Errorf("failed to regenerate access: %s", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return response.UserResponse{}, "", err
+	}
+
+	return ures, code, nil
+}
+
+func (c *ApiController) fetchMeWithDeal(ctx context.Context, token model.Token, dealID string) (model.User, model.Deal, error) {
+	var (
+		user model.User
+		deal model.Deal
+	)
+
+	eg, ectx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		user, err = c.apiClient.GetMe(ectx, token)
+		if err != nil {
+			c.logger.Errorf("failed to get user details: %s", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		deal, err = c.apiClient.GetDeal(ectx, dealID, token)
+		if err != nil {
+			c.logger.Errorf("failed to get deal: %s", err.Error())
+			return err
+		}
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return model.User{}, model.Deal{}, err
+	}
+
+	return user, deal, nil
+}
+
+func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationID, personID string, token model.Token) (model.PersonData, map[string]any, []model.Product, error) {
+	var (
+		buyer        model.PersonData
+		organization map[string]any
+		products     []model.Product
+	)
+
+	eg, ectx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		buyer, err = c.apiClient.GetPerson(ectx, personID, token)
+		if err != nil {
+			c.logger.Errorf("failed to get buyer: %s", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		organization, err = c.apiClient.GetOrganization(ectx, organizationID, token)
+		if err != nil {
+			c.logger.Errorf("failed to get organization: %s", err.Error())
+			return err
+		}
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		products, err = c.apiClient.GetDealProducts(ectx, dealID, token)
+		if err != nil {
+			c.logger.Errorf("failed to get deal products: %s", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return model.PersonData{}, map[string]any{}, []model.Product{}, err
+	}
+
+	return buyer, organization, products, nil
+}
+
 func (c *ApiController) BuildGetData() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
@@ -222,7 +341,7 @@ func (c *ApiController) BuildGetData() http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := c.createTimeoutContext(r, 5*time.Second)
+		ctx, cancel := c.createTimeoutContext(r, 7*time.Second)
 		defer cancel()
 
 		data, err := c.getAccess(ctx, code)
@@ -231,77 +350,35 @@ func (c *ApiController) BuildGetData() http.HandlerFunc {
 			return
 		}
 
-		var (
-			ures  response.UserResponse
-			user  model.User
-			deal  model.Deal
-			nCode string
-		)
-
-		eg, ectx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			var status int
-			var err error
-			ures, status, err = c.getUser(ectx, fmt.Sprint(data.UserID))
-			if err != nil {
-				c.logger.Errorf("failed to get user: %s", err.Error())
-				return err
-			}
-			if status != http.StatusOK {
-				return fmt.Errorf("user fetch failed with status: %d", status)
-			}
-			return nil
-		})
-
-		eg.Go(func() error {
-			var err error
-			nCode, err = c.regenerateAccess(ectx, fmt.Sprint(data.UserID), data.DealID)
-			if err != nil {
-				c.logger.Errorf("failed to regenerate access: %s", err.Error())
-				return err
-			}
-			return nil
-		})
-
-		if err := eg.Wait(); err != nil {
+		ures, code, err := c.fetchUserWithCode(ctx, fmt.Sprint(data.UserID), data.DealID)
+		if err != nil {
 			c.writeErrorResponse(rw, http.StatusInternalServerError)
 			return
 		}
 
 		token := c.createToken(ures)
-		eg, ectx = errgroup.WithContext(ctx)
 
-		eg.Go(func() error {
-			var err error
-			user, err = c.apiClient.GetMe(ectx, token)
-			if err != nil {
-				c.logger.Errorf("failed to get user details: %s", err.Error())
-				return err
-			}
-			return nil
-		})
+		user, deal, err := c.fetchMeWithDeal(ctx, token, data.DealID)
+		if err != nil {
+			c.writeErrorResponse(rw, http.StatusInternalServerError)
+			return
+		}
 
-		eg.Go(func() error {
-			var err error
-			deal, err = c.apiClient.GetDeal(ectx, fmt.Sprint(data.DealID), token)
-			if err != nil {
-				c.logger.Errorf("failed to get deal: %s", err.Error())
-				return err
-			}
-			return nil
-		})
-
-		if err := eg.Wait(); err != nil {
-			c.writeErrorResponse(rw, http.StatusBadRequest)
+		buyer, organization, products, err := c.fetchDealData(ctx, data.DealID, fmt.Sprint(deal.OrgID), fmt.Sprint(deal.PersonID), token)
+		if err != nil {
+			c.writeErrorResponse(rw, http.StatusInternalServerError)
 			return
 		}
 
 		c.writeJSONResponse(rw, response.DataResponse{
 			Data: map[string]any{
-				"user": user,
-				"deal": deal,
+				"seller":       user,
+				"deal":         deal,
+				"buyer":        buyer,
+				"organization": organization,
+				"products":     products,
 			},
-			Code: nCode,
+			Code: code,
 		})
 	}
 }
