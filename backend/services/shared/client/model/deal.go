@@ -18,48 +18,39 @@
 
 package model
 
-import "time"
-
 type Deal struct {
-	ID                int                    `json:"id"`
-	Title             string                 `json:"title"`
-	CreatorUserID     int                    `json:"creator_user_id"`
-	OwnerID           int                    `json:"owner_id"`
-	Value             float64                `json:"value"`
-	PersonID          int                    `json:"person_id"`
-	OrgID             int                    `json:"org_id"`
-	StageID           int                    `json:"stage_id"`
-	PipelineID        int                    `json:"pipeline_id"`
-	Currency          string                 `json:"currency"`
-	ArchiveTime       *time.Time             `json:"archive_time"`
-	AddTime           time.Time              `json:"add_time"`
-	UpdateTime        time.Time              `json:"update_time"`
-	StageChangeTime   time.Time              `json:"stage_change_time"`
-	Status            string                 `json:"status"`
-	IsArchived        bool                   `json:"is_archived"`
-	IsDeleted         bool                   `json:"is_deleted"`
-	Probability       int                    `json:"probability"`
-	LostReason        *string                `json:"lost_reason"`
-	VisibleTo         int                    `json:"visible_to"`
-	CloseTime         *time.Time             `json:"close_time"`
-	WonTime           *time.Time             `json:"won_time"`
-	LostTime          *time.Time             `json:"lost_time"`
-	LocalWonDate      *string                `json:"local_won_date"`
-	LocalLostDate     *string                `json:"local_lost_date"`
-	LocalCloseDate    *string                `json:"local_close_date"`
-	ExpectedCloseDate *string                `json:"expected_close_date"`
-	LabelIDs          []int                  `json:"label_ids"`
-	Origin            string                 `json:"origin"`
-	OriginID          *int                   `json:"origin_id"`
-	Channel           int                    `json:"channel"`
-	ChannelID         string                 `json:"channel_id"`
-	ACV               float64                `json:"acv"`
-	ARR               float64                `json:"arr"`
-	MRR               float64                `json:"mrr"`
-	CustomFields      map[string]interface{} `json:"custom_fields"`
+	ID            int     `json:"id"`
+	Title         string  `json:"title"`
+	CreatorUserID int     `json:"creator_user_id"`
+	OwnerID       int     `json:"owner_id"`
+	Value         float64 `json:"value"`
+	PersonID      int     `json:"person_id"`
+	OrgID         int     `json:"org_id"`
+	StageID       int     `json:"stage_id"`
+	PipelineID    int     `json:"pipeline_id"`
+	Currency      string  `json:"currency"`
+	Status        string  `json:"status"`
+	Origin        string  `json:"origin"`
+	OriginID      *int    `json:"origin_id"`
+	Channel       int     `json:"channel"`
+	ChannelID     string  `json:"channel_id"`
 }
 
 type DealResponse struct {
 	Success bool `json:"success"`
 	Data    Deal `json:"data"`
+}
+
+type Product struct {
+	ID        int     `json:"id"`
+	Name      string  `json:"name"`
+	Sum       float64 `json:"sum"`
+	Quantity  int     `json:"quantity"`
+	ItemPrice float64 `json:"item_price"`
+}
+
+// TODO: Handle pagination gracefully
+type ProductsResponse struct {
+	Success bool      `json:"success"`
+	Data    []Product `json:"data"`
 }

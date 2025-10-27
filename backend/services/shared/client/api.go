@@ -60,6 +60,87 @@ func NewPipedriveApiClient() PipedriveApiClient {
 	}
 }
 
+func (p *PipedriveApiClient) GetOrganization(ctx context.Context, id string, token model.Token) (map[string]any, error) {
+	var resp model.OrganizationResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/organizations/%s", token.ApiDomain, id))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return nil, &UnexpectedStatusCodeError{
+			Action: "get organization",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	return resp.Data, nil
+}
+
+func (p *PipedriveApiClient) GetPerson(ctx context.Context, id string, token model.Token) (model.PersonData, error) {
+	var resp model.PersorResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/persons/%s", token.ApiDomain, id))
+
+	if err != nil {
+		return model.PersonData{}, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return model.PersonData{}, &UnexpectedStatusCodeError{
+			Action: "get person",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	return resp.Data, nil
+}
+
+func (p *PipedriveApiClient) GetDealProducts(ctx context.Context, id string, token model.Token) ([]model.Product, error) {
+	var resp model.ProductsResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/deals/%s/products", token.ApiDomain, id))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return nil, &UnexpectedStatusCodeError{
+			Action: "get deal products",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	if !resp.Success {
+		return nil, &UnexpectedStatusCodeError{
+			Action: "get deal products",
+			Code:   http.StatusInternalServerError,
+		}
+	}
+
+	// TODO: Handle pagination more gracefully
+	if len(resp.Data) > 5 {
+		return resp.Data[:5], nil
+	}
+
+	return resp.Data, nil
+}
+
 func (p *PipedriveApiClient) GetDeal(ctx context.Context, id string, token model.Token) (model.Deal, error) {
 	var deal model.Deal
 	var resp model.DealResponse
