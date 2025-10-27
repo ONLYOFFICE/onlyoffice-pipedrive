@@ -48,10 +48,6 @@ var (
 			return http.ErrUseLastResponse
 		},
 	}
-	pluginGUID         = "asc.{9DC93CDB-B576-4F0C-B55E-FCC9C48DD008}"
-	autofillerUrl      = "https://nsnz.ngrok.io/static"
-	autofillerConfig   = "https://nsnz.ngrok.io/static/config.json"
-	autofillerCallback = "https://nsnz.ngrok.io/api/data"
 )
 
 type ConfigHandler struct {
@@ -222,24 +218,18 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 			Lang: usr.Language.Lang,
 			Plugins: response.Plugins{
 				Autostart: []string{
-					pluginGUID,
+					c.onlyoffice.Onlyoffice.Builder.PluginGUID,
 				},
 				Options: map[string]any{
-					pluginGUID: map[string]any{
-						"code":         req.Code,
-						"aif_callback": autofillerCallback,
-						"username":     usr.Name,
-					},
-					"all": map[string]any{
-						"code":         req.Code,
-						"aif_callback": autofillerCallback,
-						"username":     usr.Name,
+					c.onlyoffice.Onlyoffice.Builder.PluginGUID: map[string]any{
+						"code":     req.Code,
+						"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
 					},
 				},
 				PluginsData: []string{
-					autofillerConfig,
+					c.onlyoffice.Onlyoffice.Builder.AutofillerConfig,
 				},
-				Url: autofillerUrl,
+				Url: c.onlyoffice.Onlyoffice.Builder.AutofillerURL,
 			},
 		},
 		Type:      t,
