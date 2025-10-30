@@ -75,4 +75,5 @@ export type ConfigResponse = {
   type: string;
   token: string;
   server_url: string;
+  demo_enabled: boolean;
 };

@@ -33,7 +33,7 @@ const onDrop = <T extends File>(acceptedFiles: T[]): Promise<void> => {
   return uploadFile(
     `${url}api/v1/files`,
     parameters.get("selectedIds") || "",
-    acceptedFiles[0]
+    acceptedFiles[0],
   );
 };
 
@@ -55,7 +55,7 @@ export const Upload: React.FC = () => {
             errorText={
               t(
                 "upload.error",
-                "Could not upload your file. Please contact ONLYOFFICE support."
+                "Could not upload your file. Please contact ONLYOFFICE support.",
               ) ||
               "Could not upload your file. Please contact ONLYOFFICE support."
             }
@@ -71,7 +71,13 @@ export const Upload: React.FC = () => {
               t("upload.subtext", "File size is limited") ||
               "File size is limited"
             }
-            onDrop={async (files, rejections, event) => {
+            onDrop={async (
+              files,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              _rejections: FileRejection[],
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              _event: DropEvent,
+            ) => {
               try {
                 await new Promise((resolve) => {
                   setTimeout(resolve, 1000);
@@ -81,7 +87,7 @@ export const Upload: React.FC = () => {
                   message: t(
                     "snackbar.uploaded.ok",
                     "File {{file}} has been uploaded",
-                    { file: files[0].name }
+                    { file: files[0].name },
                   ),
                 });
                 return Promise.resolve();
@@ -90,7 +96,7 @@ export const Upload: React.FC = () => {
                   message: t(
                     "snackbar.uploaded.error",
                     "Could not upload file {{file}}",
-                    { file: files[0].name }
+                    { file: files[0].name },
                   ),
                 });
                 return Promise.reject();

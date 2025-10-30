@@ -29,21 +29,29 @@ import { OnlyofficeFileInfo } from "@components/info";
 import { OnlyofficeNoFile } from "@components/nofile";
 import { OnlyofficeSpinner } from "@components/spinner";
 
+import { OnlyofficeBackgroundError } from "@layouts/ErrorBackground";
+
 import { useFileSearch } from "@hooks/useFileSearch";
+
+import { checkSettings } from "@services/settings";
 
 import { formatBytes, getFileIcon, isFileSupported } from "@utils/file";
 import { getCurrentURL } from "@utils/url";
 
+import SettingsError from "@assets/settings-error.svg";
 import { OnlyofficeFileActions } from "./Actions";
 
 export const Main: React.FC = () => {
   const { t } = useTranslation();
   const { url, parameters } = getCurrentURL();
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
+  const [settingsConfigured, setSettingsConfigured] = useState<boolean | null>(
+    null,
+  );
   const { isLoading, fetchNextPage, isFetchingNextPage, files, hasNextPage } =
     useFileSearch(
       `${url}api/v1/deals/${parameters.get("selectedIds")}/files`,
-      20
+      20,
     );
 
   const observer = useRef<IntersectionObserver | null>(null);
@@ -58,15 +66,47 @@ export const Main: React.FC = () => {
       });
       if (node) observer.current.observe(node);
     },
-    [isLoading, fetchNextPage, hasNextPage]
+    [isLoading, fetchNextPage, hasNextPage],
   );
 
   useEffect(() => {
     new AppExtensionsSDK()
       .initialize()
-      .then((s) => setSDK(s))
-      .catch(() => setSDK(null));
+      .then(async (s) => {
+        setSDK(s);
+        const configured = await checkSettings(s);
+        setSettingsConfigured(configured);
+      })
+      .catch(() => {
+        setSDK(null);
+        setSettingsConfigured(false);
+      });
   }, []);
+
+  if (settingsConfigured === null) {
+    return (
+      <div className="w-full h-full flex justify-center items-center bg-white dark:bg-dark-bg">
+        <OnlyofficeSpinner />
+      </div>
+    );
+  }
+
+  if (settingsConfigured === false) {
+    return (
+      <OnlyofficeBackgroundError
+        Icon={<SettingsError className="mb-5" />}
+        title={t("background.settings.title", "Document Server not configured")}
+        subtitle={t(
+          "background.settings.subtitle",
+          "Please configure the Document Server in the settings.",
+        )}
+        button={t("background.settings.button", "Go to Settings")}
+        onClick={async () => {
+          window.open(`${url}settings/marketplace`, "_blank");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="table-shadow h-full bg-white dark:bg-dark-bg">
@@ -105,7 +145,7 @@ export const Main: React.FC = () => {
                         [t("files.info.creation", "Creation date")]:
                           file.add_time,
                         [t("files.info.size", "Size")]: formatBytes(
-                          file.file_size
+                          file.file_size,
                         ),
                       }}
                     />
@@ -132,7 +172,7 @@ export const Main: React.FC = () => {
                       [t("files.info.creation", "Creation date")]:
                         file.add_time,
                       [t("files.info.size", "Size")]: formatBytes(
-                        file.file_size
+                        file.file_size,
                       ),
                     }}
                   />

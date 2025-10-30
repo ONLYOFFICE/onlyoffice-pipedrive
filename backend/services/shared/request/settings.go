@@ -20,6 +20,7 @@ package request
 
 import (
 	"encoding/json"
+	"net/url"
 	"strings"
 )
 
@@ -57,6 +58,15 @@ func (c DocSettings) Validate() error {
 
 		if c.DocHeader == "" {
 			return ErrInvalidDocHeader
+		}
+
+		parsedURL, err := url.Parse(c.DocAddress)
+		if err != nil {
+			return ErrInvalidDocAddress
+		}
+
+		if parsedURL.Scheme == "http" {
+			return ErrHttpNotAllowed
 		}
 	} else if c.DemoEnabled {
 		return nil

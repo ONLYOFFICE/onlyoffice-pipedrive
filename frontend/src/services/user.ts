@@ -24,7 +24,7 @@ import { PipedriveSearchUsersResponse } from "src/types/user";
 
 export const fetchUsers = async (
   url: string,
-  signal: AbortSignal | undefined = undefined
+  signal: AbortSignal | undefined = undefined,
 ) => {
   const res = await axios<PipedriveSearchUsersResponse>({
     method: "GET",

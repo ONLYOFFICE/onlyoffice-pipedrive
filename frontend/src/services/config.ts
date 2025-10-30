@@ -28,7 +28,7 @@ export const fetchConfig = async (
   key: string,
   dealID: string,
   dark?: boolean,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ) => {
   const client = axios.create();
   axiosRetry(client, {

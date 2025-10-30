@@ -7,10 +7,10 @@ ENV BACKEND_GATEWAY=$BACKEND_GATEWAY \
     PIPEDRIVE_CREATE_MODAL_ID=$PIPEDRIVE_CREATE_MODAL_ID \
     PIPEDRIVE_EDITOR_MODAL_ID=$PIPEDRIVE_EDITOR_MODAL_ID
 WORKDIR /usr/src/app
-COPY ./frontend/package*.json ./
-RUN npm install
+COPY ./frontend/package*.json ./frontend/yarn.lock ./
+RUN yarn install --immutable
 COPY frontend .
-RUN npm run build
+RUN yarn build
 
 FROM golang:alpine AS build-gateway
 WORKDIR /usr/src/app

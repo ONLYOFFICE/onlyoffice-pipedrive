@@ -33,6 +33,7 @@ type BuildConfigResponse struct {
 	Token        string       `json:"token,omitempty"`
 	Session      bool         `json:"is_session,omitempty"`
 	ServerURL    string       `json:"server_url"`
+	DemoEnabled  bool         `json:"demo_enabled"`
 }
 
 func (r BuildConfigResponse) ToJSON() []byte {

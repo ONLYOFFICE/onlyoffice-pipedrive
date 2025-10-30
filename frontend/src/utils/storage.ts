@@ -22,7 +22,7 @@ export function setWithExpiry<T>(key: string, value: T, expiry: number): void {
     JSON.stringify({
       value,
       expiry,
-    })
+    }),
   );
 }
 

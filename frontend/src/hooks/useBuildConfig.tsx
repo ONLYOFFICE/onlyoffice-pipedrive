@@ -26,7 +26,7 @@ export function useBuildConfig(
   name: string,
   key: string,
   dealID: string,
-  dark = false
+  dark = false,
 ) {
   const { isLoading, error, data } = useQuery({
     queryKey: ["config", id, key, dark],

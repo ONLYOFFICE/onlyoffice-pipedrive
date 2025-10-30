@@ -567,6 +567,41 @@ func (c *ApiController) BuildGetSettings() http.HandlerFunc {
 	}
 }
 
+func (c *ApiController) BuildCheckSettings() http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
+		if !ok {
+			rw.WriteHeader(http.StatusForbidden)
+			c.logger.Error("could not extract pipedrive context from the context")
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+
+		var docs response.DocSettingsResponse
+		if err := c.client.Call(
+			ctx,
+			c.client.NewRequest(
+				fmt.Sprintf("%s:settings", c.config.Namespace),
+				"SettingsSelectHandler.GetSettings",
+				fmt.Sprint(pctx.CID),
+			),
+			&docs,
+		); err != nil {
+			c.logger.Debugf("could not get settings: %s", err.Error())
+			rw.Write(response.SettingsConfiguredResponse{Configured: false}.ToJSON())
+			return
+		}
+
+		hasCredentials := docs.DocAddress != "" && docs.DocSecret != "" && docs.DocHeader != ""
+		hasDemoMode := docs.DemoEnabled && (docs.DemoStarted.IsZero() || docs.DemoStarted.After(time.Now().AddDate(0, 0, -30)))
+
+		rw.Write(response.SettingsConfiguredResponse{Configured: hasCredentials || hasDemoMode}.ToJSON())
+	}
+}
+
 func (c *ApiController) BuildGetConfig() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		pctx, ok := c.extractPipedriveContext(r)

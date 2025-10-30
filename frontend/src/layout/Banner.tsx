@@ -46,7 +46,7 @@ export const Banner: React.FC = () => {
               text={
                 t(
                   "banner.subtitle",
-                  "Easily launch the editors in the cloud without downloading and installation"
+                  "Easily launch the editors in the cloud without downloading and installation",
                 ) ||
                 "Easily launch the editors in the cloud without downloading and installation"
               }
@@ -61,7 +61,7 @@ export const Banner: React.FC = () => {
           className="pl-5 pr-5 pt-2 pb-2 text-sm rounded overflow-hidden text-ellipsis inline-block max-w-[120px] cursor-pointer hover:shadow-sm duration-200 bg-gray-800 dark:bg-gray-700 text-white"
           onClick={() =>
             window.open(
-              "https://www.onlyoffice.com/docs-registration.aspx?referer=pipedrive"
+              "https://www.onlyoffice.com/docs-registration.aspx?referer=pipedrive",
             )
           }
         >

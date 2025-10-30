@@ -54,7 +54,7 @@ export const MainPage: React.FC = () => {
               : "background.error.title.main",
             status === 401
               ? "The document security token has expired"
-              : "Something went wrong"
+              : "Something went wrong",
           )}
           subtitle={t(
             status === 401
@@ -62,7 +62,7 @@ export const MainPage: React.FC = () => {
               : "background.reinstall.subtitle",
             status === 401
               ? "Something went wrong. Please reinstall the app."
-              : "Something went wrong. Please reload the app."
+              : "Something went wrong. Please reload the app.",
           )}
           button={t("background.reinstall.button", "Reinstall") || "Reinstall"}
           onClick={
@@ -70,7 +70,7 @@ export const MainPage: React.FC = () => {
               ? () =>
                   window.open(
                     `${getCurrentURL().url}settings/marketplace`,
-                    "_blank"
+                    "_blank",
                   )
               : undefined
           }

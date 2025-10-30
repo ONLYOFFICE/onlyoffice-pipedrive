@@ -37,12 +37,14 @@ import OnlyofficeLogo from "@assets/onlyoffice-logo.svg";
 import SettingsError from "@assets/settings-error.svg";
 import { getCurrentURL } from "@utils/url";
 
-const SettingsErrorIcon = () => (
-  <div className="flex flex-col items-center justify-center">
-    <OnlyofficeLogo />
-    <SettingsError />
-  </div>
-);
+function SettingsErrorIcon() {
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <OnlyofficeLogo />
+      <SettingsError />
+    </div>
+  );
+}
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -70,10 +72,27 @@ export const SettingsPage: React.FC = () => {
     const startDate = new Date(demoStarted);
     if (Number.isNaN(startDate.getTime())) return true;
 
-    const fiveDaysAgo = new Date();
-    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    return startDate > fiveDaysAgo;
+    return startDate > thirtyDaysAgo;
+  };
+
+  const isDemoExpired = (): boolean => {
+    if (
+      !demoStarted ||
+      demoStarted === "" ||
+      demoStarted.startsWith("0001-01-01")
+    )
+      return false;
+
+    const startDate = new Date(demoStarted);
+    if (Number.isNaN(startDate.getTime())) return false;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    return startDate <= thirtyDaysAgo;
   };
 
   const getDemoStatus = (): string => {
@@ -86,30 +105,30 @@ export const SettingsPage: React.FC = () => {
     )
       return t(
         "settings.demo.status.notstarted",
-        "Demo will start when first used"
+        "Demo will start when first used",
       );
 
     const startDate = new Date(demoStarted);
     if (Number.isNaN(startDate.getTime()))
       return t(
         "settings.demo.status.notstarted",
-        "Demo will start when first used"
+        "Demo will start when first used",
       );
 
     const daysAgo = Math.floor(
-      (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24),
     );
-    const daysLeft = 5 - daysAgo;
+    const daysLeft = 30 - daysAgo;
 
     if (daysLeft > 0)
       return t(
         "settings.demo.status.active",
         "Demo active - {{days}} day(s) remaining",
-        { days: daysLeft }
+        { days: daysLeft },
       );
     return t(
       "settings.demo.status.expired",
-      "Demo has expired - please provide credentials"
+      "Demo has expired - please provide credentials",
     );
   };
 
@@ -160,7 +179,17 @@ export const SettingsPage: React.FC = () => {
         await sdk.execute(Command.SHOW_SNACKBAR, {
           message: t(
             "settings.validation.error",
-            "Please provide Document Server credentials or enable valid demo mode"
+            "Please provide Document Server credentials or enable valid demo mode",
+          ),
+        });
+        return;
+      }
+
+      if (address && !address.trim().toLowerCase().startsWith("https://")) {
+        await sdk.execute(Command.SHOW_SNACKBAR, {
+          message: t(
+            "settings.validation.https",
+            "Document Server must use https protocol for Pipedrive integration",
           ),
         });
         return;
@@ -175,20 +204,20 @@ export const SettingsPage: React.FC = () => {
           finalAddress || "",
           secret || "",
           header || "",
-          demoEnabled
+          demoEnabled,
         );
         setDemoStarted(demoStarted || new Date().toISOString());
         await sdk.execute(Command.SHOW_SNACKBAR, {
           message: t(
             "settings.saving.ok",
-            "ONLYOFFICE settings have been saved"
+            "ONLYOFFICE settings have been saved",
           ),
         });
       } catch {
         await sdk.execute(Command.SHOW_SNACKBAR, {
           message: t(
             "settings.saving.error",
-            "Could not save ONLYOFFICE settings"
+            "Could not save ONLYOFFICE settings",
           ),
         });
       } finally {
@@ -214,7 +243,7 @@ export const SettingsPage: React.FC = () => {
               : "background.error.subtitle.token",
             status !== 401
               ? "Could not fetch plugin settings. Something went wrong. Please reload the pipedrive window"
-              : "Could not fetch plugin settings. Something went wrong with your access token. Please reinstall the app"
+              : "Could not fetch plugin settings. Something went wrong with your access token. Please reinstall the app",
           )}
           button={
             status === 401
@@ -227,7 +256,7 @@ export const SettingsPage: React.FC = () => {
                   if (status === 401)
                     window.open(
                       `${getCurrentURL().url}settings/marketplace`,
-                      "_blank"
+                      "_blank",
                     );
                 }
               : () => window.location.reload()
@@ -240,7 +269,7 @@ export const SettingsPage: React.FC = () => {
           title={t("background.access.title", "Access Denied")}
           subtitle={t(
             "background.access.subtitle",
-            "Something went wrong or access denied"
+            "Something went wrong or access denied",
           )}
           button={t("button.reload", "Reload") || "Reload"}
           onClick={() => window.location.reload()}
@@ -262,7 +291,7 @@ export const SettingsPage: React.FC = () => {
                 Pipedrive using ONLYOFFICE Document Server, allows multiple users
                 to collaborate in real time and to save back those changes to
                 Pipedrive
-              `
+              `,
               )}
             </p>
             <div
@@ -291,7 +320,15 @@ export const SettingsPage: React.FC = () => {
             <div className="pl-5 pr-5 pb-2">
               <OnlyofficeInput
                 text={t("settings.inputs.address", "Document Server Address")}
-                valid={!!address || (demoEnabled && isDemoValid())}
+                valid={
+                  !address || address.trim() === ""
+                    ? demoEnabled && isDemoValid()
+                    : address.trim().toLowerCase().startsWith("https://")
+                }
+                errorText={t(
+                  "settings.validation.https",
+                  "Document Server must use https protocol for Pipedrive integration",
+                )}
                 disabled={saving}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -300,7 +337,17 @@ export const SettingsPage: React.FC = () => {
             <div className="pl-5 pr-5 pb-2">
               <OnlyofficeInput
                 text={t("settings.inputs.secret", "Document Server Secret")}
-                valid={!!secret || (demoEnabled && isDemoValid())}
+                valid={
+                  !secret || secret.trim() === ""
+                    ? demoEnabled && isDemoValid()
+                    : true
+                }
+                errorText={
+                  t(
+                    "settings.inputs.error.secret",
+                    "Document Server Secret is required",
+                  ) || "Document Server Secret is required"
+                }
                 disabled={saving}
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
@@ -310,7 +357,17 @@ export const SettingsPage: React.FC = () => {
             <div className="pl-5 pr-5">
               <OnlyofficeInput
                 text={t("settings.inputs.header", "Document Server Header")}
-                valid={!!header || (demoEnabled && isDemoValid())}
+                valid={
+                  !header || header.trim() === ""
+                    ? demoEnabled && isDemoValid()
+                    : true
+                }
+                errorText={
+                  t(
+                    "settings.inputs.error.header",
+                    "Document Server Header is required",
+                  ) || "Document Server Header is required"
+                }
                 disabled={saving}
                 value={header}
                 onChange={(e) => setHeader(e.target.value)}
@@ -323,8 +380,8 @@ export const SettingsPage: React.FC = () => {
                   id="demo-enabled"
                   checked={demoEnabled}
                   onChange={(e) => setDemoEnabled(e.target.checked)}
-                  disabled={saving}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2"
+                  disabled={saving || isDemoExpired()}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <label
                   htmlFor="demo-enabled"
@@ -338,7 +395,7 @@ export const SettingsPage: React.FC = () => {
                   ? getDemoStatus()
                   : t(
                       "settings.inputs.demo.description",
-                      "Enable demo mode to test the integration without a Document Server"
+                      "Enable demo mode to test the integration without a Document Server",
                     )}
               </p>
             </div>
@@ -346,7 +403,18 @@ export const SettingsPage: React.FC = () => {
               <OnlyofficeButton
                 text={t("button.save", "Save")}
                 primary
-                disabled={saving}
+                disabled={
+                  saving ||
+                  (!address || address.trim() === ""
+                    ? !(demoEnabled && isDemoValid())
+                    : !address.trim().toLowerCase().startsWith("https://")) ||
+                  (!secret || secret.trim() === ""
+                    ? !(demoEnabled && isDemoValid())
+                    : false) ||
+                  (!header || header.trim() === ""
+                    ? !(demoEnabled && isDemoValid())
+                    : false)
+                }
                 onClick={handleSettings}
               />
             </div>

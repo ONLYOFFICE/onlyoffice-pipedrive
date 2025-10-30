@@ -54,6 +54,23 @@ func (u *DocSettings) Validate() error {
 		}
 	}
 
+	if u.DemoEnabled {
+		if u.DemoStarted.IsZero() {
+			u.DemoStarted = time.Now()
+			return nil
+		}
+
+		staleDate := time.Now().AddDate(0, 0, -30)
+		if u.DemoStarted.Before(staleDate) {
+			return &InvalidModelFieldError{
+				Model:  "Docserver",
+				Field:  "Demo Started",
+				Reason: "Demo period has expired (more than 30 days old)",
+			}
+		}
+		return nil
+	}
+
 	hasCredentials := u.DocAddress != "" || u.DocSecret != "" || u.DocHeader != ""
 
 	if hasCredentials {
@@ -100,20 +117,6 @@ func (u *DocSettings) Validate() error {
 		}
 
 		u.DocAddress += "/"
-	} else if u.DemoEnabled {
-		if u.DemoStarted.IsZero() {
-			u.DemoStarted = time.Now()
-			return nil
-		}
-
-		fiveDaysAgo := time.Now().AddDate(0, 0, -5)
-		if u.DemoStarted.Before(fiveDaysAgo) {
-			return &InvalidModelFieldError{
-				Model:  "Docserver",
-				Field:  "Demo Started",
-				Reason: "Demo period has expired (more than 5 days old)",
-			}
-		}
 	}
 
 	return nil

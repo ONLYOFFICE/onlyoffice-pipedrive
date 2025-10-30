@@ -1,17 +1,21 @@
 {
   "name": "onlyoffice-pipedrive",
-  "description": "ONLYOFFICE Pipedrive App Frontend",
-  "author": "Ascensio System SIA <integration@onlyoffice.com> (https://www.onlyoffice.com)",
-  "maintainers": [
-    "Ascensio System SIA <integration@onlyoffice.com> (https://www.onlyoffice.com)"
-  ],
-  "license": "Apache-2.0",
   "version": "1.1.0",
-  "private": true,
+  "description": "ONLYOFFICE Pipedrive App Frontend",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ONLYOFFICE/onlyoffice-pipedrive/issues",
+    "email": "support@onlyoffice.com"
+  },
+  "homepage": "https://github.com/ONLYOFFICE/onlyoffice-pipedrive#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/ONLYOFFICE/onlyoffice-pipedrive.git"
   },
+  "author": "Ascensio System SIA <integration@onlyoffice.com> (https://www.onlyoffice.com)",
+  "maintainers": [
+    "Ascensio System SIA <integration@onlyoffice.com> (https://www.onlyoffice.com)"
+  ],
   "keywords": [
     "docs",
     "editor",
@@ -19,10 +23,7 @@
     "pipedrive",
     "onlyoffice"
   ],
-  "bugs": {
-    "url": "https://github.com/ONLYOFFICE/onlyoffice-pipedrive/issues"
-  },
-  "homepage": "https://github.com/ONLYOFFICE/onlyoffice-pipedrive#readme",
+  "private": true,
   "scripts": {
     "start:dev": "webpack serve --config webpack.development.js",
     "eslint:fix": "eslint \"**/*.{ts,tsx}\" --fix",
@@ -37,6 +38,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.38.0",
     "@svgr/webpack": "^8.1.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",

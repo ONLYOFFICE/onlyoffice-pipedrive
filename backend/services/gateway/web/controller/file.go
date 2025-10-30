@@ -106,6 +106,16 @@ func (c FileController) BuildGetFile() http.HandlerFunc {
 			return
 		}
 
+		if len(filename) > 0 {
+			lastDot := strings.LastIndex(filename, ".")
+			if lastDot > 0 {
+				baseName := strings.TrimSpace(filename[:lastDot])
+				if baseName == "" {
+					filename = fmt.Sprintf("New Document.%s", fileType)
+				}
+			}
+		}
+
 		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
 		if !ok {
 			rw.WriteHeader(http.StatusForbidden)

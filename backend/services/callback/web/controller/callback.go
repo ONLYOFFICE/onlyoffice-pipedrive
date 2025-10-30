@@ -74,8 +74,8 @@ func (c CallbackController) isDemoModeValid(settings response.DocSettingsRespons
 		return true
 	}
 
-	fiveDaysAgo := time.Now().AddDate(0, 0, -5)
-	return settings.DemoStarted.After(fiveDaysAgo)
+	staleDate := time.Now().AddDate(0, 0, -30)
+	return settings.DemoStarted.After(staleDate)
 }
 
 func (c CallbackController) BuildPostHandleCallback() http.HandlerFunc {

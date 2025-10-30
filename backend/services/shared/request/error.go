@@ -26,4 +26,5 @@ var (
 	ErrInvalidDocSecret  = errors.New("invalid doc server secret")
 	ErrInvalidDocHeader  = errors.New("invalid doc server header")
 	ErrInvalidDemoPeriod = errors.New("demo period has expired")
+	ErrHttpNotAllowed    = errors.New("document server must use https protocol for pipedrive integration")
 )

@@ -48,8 +48,7 @@ export const OnlyofficeInput: React.FC<InputProps> = ({
   onChange,
 }) => {
   const istyle = cx({
-    "font-normal text-sm text-gray-700 dark:text-dark-text appearance-none block select-auto":
-      true,
+    "font-normal text-sm text-gray-700 dark:text-dark-text appearance-none block select-auto": true,
     "text-xs": textSize === "xs",
     "w-full border rounded-sm h-10 px-4 bg-white dark:bg-dark-bg": true,
     "border-gray-light dark:border-dark-border": valid,

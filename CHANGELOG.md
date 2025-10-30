@@ -5,6 +5,7 @@
 - dark theme support for improved user experience
 - demo server support for easier testing and evaluation
 - user-voice links for feedback collection
+
 ## Changed
 - default empty file templates
 - new file icons

@@ -63,11 +63,36 @@ export const OnlyofficeEditorPage: React.FC = () => {
     params.get("name") || "new.docx",
     params.get("key") || new Date().toTimeString(),
     params.get("deal_id") || "1",
-    isDark
+    isDark,
   );
 
   const validConfig = !error && !isLoading && data;
   const backgroundClass = isDark ? "bg-dark-bg" : "bg-white";
+
+  const onDocumentReady = () => {
+    if (data?.demo_enabled) {
+      const docEditor = (
+        window as {
+          DocEditor?: {
+            instances?: {
+              docxEditor?: { showMessage?: (message: string) => void };
+            };
+          };
+        }
+      ).DocEditor?.instances?.docxEditor;
+      if (docEditor && docEditor.showMessage) {
+        docEditor.showMessage(
+          t(
+            "editor.demo.message",
+            "You are using public demo ONLYOFFICE Document Server. Please do not store private sensitive data.",
+          ),
+        );
+      }
+    }
+    const connector = window.DocEditor.instances["docxEditor"].createConnector();
+    window.connector = connector;
+  };
+
   return (
     <div className={`w-full h-full overflow-hidden ${backgroundClass}`}>
       <Helmet
@@ -105,8 +130,9 @@ export const OnlyofficeEditorPage: React.FC = () => {
           <OnlyofficeError
             text={t(
               "editor.error",
-              "Could not open the file. Something went wrong"
+              "Could not open the file. Something went wrong",
             )}
+            isDark={isDark}
           />
           <div className="pt-5">
             <OnlyofficeButton
@@ -155,10 +181,7 @@ export const OnlyofficeEditorPage: React.FC = () => {
                   onEditor();
                 },
                 onWarning: onEditor,
-                onDocumentReady: (event: any) => {
-                  const connector = window.DocEditor.instances["docxEditor"].createConnector();
-                  window.connector = connector;
-                },
+                onDocumentReady,
               },
             }}
           />

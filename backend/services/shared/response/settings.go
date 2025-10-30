@@ -35,3 +35,12 @@ func (r DocSettingsResponse) ToJSON() []byte {
 	buf, _ := json.Marshal(r)
 	return buf
 }
+
+type SettingsConfiguredResponse struct {
+	Configured bool `json:"configured"`
+}
+
+func (r SettingsConfiguredResponse) ToJSON() []byte {
+	buf, _ := json.Marshal(r)
+	return buf
+}

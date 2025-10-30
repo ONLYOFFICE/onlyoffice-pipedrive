@@ -25,7 +25,7 @@ type DragDropProps = {
   onDrop: <T extends File>(
     acceptedFiles: T[],
     fileRejections: FileRejection[],
-    event: DropEvent
+    event: DropEvent,
   ) => Promise<void>;
   errorText?: string;
   uploadingText?: string;
@@ -90,7 +90,7 @@ export const OnlyofficeDragDrop: React.FC<DragDropProps> = ({
   const uploadFile = async (
     file: File | undefined,
     event: DropEvent,
-    rejection?: FileRejection
+    rejection?: FileRejection,
   ) => {
     setError(false);
     setUploading(true);
@@ -116,8 +116,7 @@ export const OnlyofficeDragDrop: React.FC<DragDropProps> = ({
 
   const style = cx({
     "flex flex-col items-center justify-center p-5": true,
-    "border-2 border-slate-300 dark:border-dark-border border-dashed rounded-lg":
-      true,
+    "border-2 border-slate-300 dark:border-dark-border border-dashed rounded-lg": true,
     "bg-transparent bg-opacity-20 text-black dark:text-dark-text": true,
     "transition-all transition-timing-function: ease-in-out": true,
     "transition-duration: 300ms": true,

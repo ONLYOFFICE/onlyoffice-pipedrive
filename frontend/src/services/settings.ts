@@ -27,7 +27,7 @@ export const postSettings = async (
   address: string,
   secret: string,
   header: string,
-  demoEnabled = false
+  demoEnabled = false,
 ) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
   const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
@@ -36,7 +36,7 @@ export const postSettings = async (
     retryCondition: (error) => error.status === 429,
   });
 
-  await client({
+  return client({
     method: "POST",
     url: `/api/settings`,
     headers: {
@@ -74,4 +74,31 @@ export const getSettings = async (sdk: AppExtensionsSDK) => {
   });
 
   return settings.data;
+};
+
+export const checkSettings = async (sdk: AppExtensionsSDK) => {
+  const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
+  const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
+  axiosRetry(client, {
+    retries: 2,
+    retryCondition: (error) => error.status !== 200,
+    retryDelay: (count) => count * 50,
+    shouldResetTimeout: true,
+  });
+
+  try {
+    const response = await client<{ configured: boolean }>({
+      method: "GET",
+      url: `/api/settings/check`,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Pipedrive-App-Context": pctx.token,
+      },
+      timeout: 3000,
+    });
+
+    return response.data.configured;
+  } catch {
+    return false;
+  }
 };

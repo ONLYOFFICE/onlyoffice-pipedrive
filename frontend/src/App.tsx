@@ -34,11 +34,13 @@ import { OnlyofficeSpinner } from "@components/spinner";
 import { TokenProvider } from "@context/TokenContext";
 import { ThemeProvider } from "@context/ThemeContext";
 
-const CenteredOnlyofficeSpinner = () => (
-  <div className="w-full h-full flex justify-center items-center">
-    <OnlyofficeSpinner />
-  </div>
-);
+function CenteredOnlyofficeSpinner() {
+  return (
+    <div className="w-full h-full flex justify-center items-center">
+      <OnlyofficeSpinner />
+    </div>
+  );
+}
 
 const LazyRoutes: React.FC = () => {
   const location = useLocation();

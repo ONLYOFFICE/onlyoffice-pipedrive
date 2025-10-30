@@ -1,17 +1,26 @@
-name: Build pipedrive connector
+name: "Build onlyoffice-pipedrive"
 
-run-name: >
-     Build pipedrive with version: ${{ github.event.inputs.version }}
+run-name: "Build onlyoffice-pipedrive: ${{ github.event.inputs.tag || github.run_number }}"
 
 on:
+  push:
+    branches:
+    - develop
+    paths-ignore:
+    - '.github/**'
+
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Set version that will be used for images tag'
+      tag:
+        description: 'Specify tag (ex. rc.5) or it will be set automaticaly :rc.<run_number>'
         type: string
-        required: true
+        required: false
       create_modal_id:
         description: 'If set, overwrite create-modal-id with value that you specify'
+        type: string
+        required: false
+      backend_gateway:
+        description: 'If set, overwrite backend_gateway with value that you specify'
         type: string
         required: false
       type:
@@ -21,13 +30,16 @@ on:
         - 'prod'
         - 'dev'
 
-env: 
-  PRODUCT_VERSION: ${{ github.event.inputs.version }}
-          
+env:
+  DOCKER_HUB_NAMESPACE: onlyoffice
+
 jobs:
   build:
-    name: "Build tag: ${{ github.event.inputs.version }}"
+    name: "Build ${{ matrix.service}}: ${{ github.event.inputs.tag || github.run_number }}"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ frontend, settings, gateway, auth, builder, callback ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,16 +54,37 @@ jobs:
           echo ::add-mask::${MODAL_ID}
           echo "CUSTOM_MODAL_ID=${MODAL_ID}" >> "$GITHUB_ENV"
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Build
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Handle tag
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref_name }}
+          MANUAL_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          echo "APP_VERSION=1.1.1" >> "$GITHUB_ENV"
+
+          if [[ "$EVENT" == 'push' && "$REF" == 'develop' ]]; then
+           echo "RC_TAG=rc.${{ github.run_number }}" >> "$GITHUB_ENV"
+          elif [[ "$EVENT" == 'workflow_dispatch' && -z "$TAG" ]]; then
+           echo "RC_TAG=rc.${{ github.run_number }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Handle build arguments
         shell: bash
         env: 
-          ARG_POSTFIX: ${{ github.event.inputs.type }}
+          ARG_POSTFIX: ${{ (github.event_name == 'push' && 'dev') || github.event.inputs.type }}
+          CUSTOM_BACKEND_GATEWAY: ${{ github.event.inputs.backend_gateway }}
         run: |
           declare -A ArgsArray=( 
                      [backend_gateway_prod]=https://pipedrive-gateway.onlyoffice.com
@@ -59,8 +92,33 @@ jobs:
                      [create_modal_id_prod]=${{ secrets.CREATE_MODAL_ID_PROD }}
                      [create_modal_id_dev]=${{ secrets.CREATE_MODAL_ID_DEV }}
                      )
-          docker compose build \
-              --build-arg "BACKEND_GATEWAY=${ArgsArray[backend_gateway_${ARG_POSTFIX}]}" \
-              --build-arg "PIPEDRIVE_CREATE_MODAL_ID=${CUSTOM_MODAL_ID:-${ArgsArray[create_modal_id_${ARG_POSTFIX}]}}" 
-          docker compose push
-          docker images
+          
+          echo "BACKEND_GATEWAY=${CUSTOM_BACKEND_GATEWAY:-${ArgsArray[backend_gateway_${ARG_POSTFIX}]}}" >> "$GITHUB_ENV"
+          echo "PIPEDRIVE_CREATE_MODAL_ID=${CUSTOM_MODAL_ID:-${ArgsArray[create_modal_id_${ARG_POSTFIX}]}}" >> "$GITHUB_ENV"
+
+      - name: Publish Image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          build-args: |
+                  BACKEND_GATEWAY=${{ env.BACKEND_GATEWAY}}
+                  PIPEDRIVE_CREATE_MODAL_ID=${{ env.PIPEDRIVE_CREATE_MODAL_ID }}
+          target: ${{ matrix.service }}
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.DOCKER_HUB_NAMESPACE }}/pipedrive-${{ matrix.service }}:${{ env.APP_VERSION }}-${{ github.event.inputs.tag || env.RC_TAG }}
+
+  update:
+    name: Update connector
+    runs-on: ubuntu-latest
+    needs: ['build']
+    steps:
+      - name: Make hook
+        id: webhook
+        run: |
+          pipedrive_webhook_hash=$(printf 'pipedrive-webhook' | openssl dgst -sha256 -r -hmac "${{ secrets.PIPEDRIVE_WEBHOOK_TOKEN }}" | awk '{print $1}')
+          curl ${{ secrets.PIPEDRIVE_WEBHOOK_URL }} -X POST -H "X-Signature: sha256=${pipedrive_webhook_hash}" -d 'pipedrive-webhook'
+        shell: bash

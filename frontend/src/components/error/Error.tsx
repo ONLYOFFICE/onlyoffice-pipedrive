@@ -17,15 +17,23 @@
  */
 
 import React from "react";
+import cx from "classnames";
 
 type ErrorProps = {
   text: string;
+  isDark?: boolean;
 };
 
-export const OnlyofficeError: React.FC<ErrorProps> = ({ text }) => (
-  <div className="flex flex-col justify-center items-center">
-    <span className="font-semibold text-center flex items-center text-black dark:text-dark-text">
-      {text}
-    </span>
-  </div>
-);
+export const OnlyofficeError: React.FC<ErrorProps> = ({ text, isDark }) => {
+  const textStyle = cx("font-semibold text-center flex items-center", {
+    "text-white": isDark === true,
+    "text-gray-900": isDark === false,
+    "text-gray-900 dark:text-white": isDark === undefined,
+  });
+
+  return (
+    <div className="flex flex-col justify-center items-center">
+      <span className={textStyle}>{text}</span>
+    </div>
+  );
+};

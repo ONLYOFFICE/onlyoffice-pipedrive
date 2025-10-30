@@ -16,7 +16,7 @@
  *
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import md5 from "md5";
 import AppExtensionsSDK, { Command } from "@pipedrive/app-extensions-sdk";
@@ -38,12 +38,15 @@ export const Creation: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
   const [file, setFile] = useState(
-    t("document.new", "New Document") || "New Document"
+    t("document.new", "New Document") || "New Document",
   );
   const [fileType, setFileType] = useState<"docx" | "pptx" | "xlsx">("docx");
   const handleChangeFile = (newType: "docx" | "pptx" | "xlsx") => {
     if (!creating) setFileType(newType);
   };
+
+  const isFileNameValid = file.trim().length > 0 && file.length <= 190;
+  const fileTypeRef = useRef(fileType);
 
   useEffect(() => {
     new AppExtensionsSDK()
@@ -51,6 +54,37 @@ export const Creation: React.FC = () => {
       .then((s) => setSDK(s))
       .catch(() => setSDK(null));
   }, []);
+
+  useEffect(() => {
+    if (fileTypeRef.current !== fileType) {
+      const defaultDocx = t("document.new", "New Document") || "New Document";
+      const defaultPptx =
+        t("document.new.presentation", "New Presentation") ||
+        "New Presentation";
+      const defaultXlsx =
+        t("document.new.spreadsheet", "New Spreadsheet") || "New Spreadsheet";
+
+      const isDefault =
+        file === defaultDocx || file === defaultPptx || file === defaultXlsx;
+      if (isDefault) {
+        switch (fileType) {
+          case "docx":
+            setFile(defaultDocx);
+            break;
+          case "pptx":
+            setFile(defaultPptx);
+            break;
+          case "xlsx":
+            setFile(defaultXlsx);
+            break;
+          default:
+            break;
+        }
+      }
+
+      fileTypeRef.current = fileType;
+    }
+  }, [fileType, file, t]);
 
   return (
     <div className="h-full w-full bg-white dark:bg-dark-bg">
@@ -64,12 +98,17 @@ export const Creation: React.FC = () => {
             <OnlyofficeInput
               text={t("creation.inputs.title", "Title")}
               labelSize="sm"
-              valid={file.length <= 190}
+              valid={isFileNameValid}
               errorText={
-                t(
-                  "creation.inputs.error",
-                  "File name length should be less than 190 characters"
-                ) || "File name length should be less than 190 characters"
+                file.trim().length === 0
+                  ? t(
+                      "creation.inputs.error.empty",
+                      "File name cannot be empty",
+                    ) || "File name cannot be empty"
+                  : t(
+                      "creation.inputs.error",
+                      "File name length should be less than 190 characters",
+                    ) || "File name length should be less than 190 characters"
               }
               value={file}
               onChange={(e) => setFile(e.target.value)}
@@ -120,7 +159,7 @@ export const Creation: React.FC = () => {
           </div>
           <div className="mx-5">
             <OnlyofficeButton
-              disabled={file.length > 190 || creating}
+              disabled={!isFileNameValid || creating}
               text={t("button.create", "Create document")}
               primary
               Icon={<Redirect />}
@@ -129,6 +168,7 @@ export const Creation: React.FC = () => {
                 const token = await sdk?.execute(Command.GET_SIGNED_TOKEN);
                 if (!token) return;
                 const { parameters } = getCurrentURL();
+
                 try {
                   const fres = await axios({
                     method: "GET",
@@ -152,10 +192,10 @@ export const Creation: React.FC = () => {
                     }&deal_id=${
                       fres.data.data.deal_id
                     }&name=${`${encodeURIComponent(
-                      file.substring(0, 190)
+                      file.substring(0, 190),
                     )}.${fileType}`}&key=${md5(
-                      fres.data.data.id + fres.data.data.update_time
-                    )}&lng=${i18next.language}`
+                      fres.data.data.id + fres.data.data.update_time,
+                    )}&lng=${i18next.language}`,
                   );
                   await sdk?.execute(Command.CLOSE_MODAL);
                 } catch {

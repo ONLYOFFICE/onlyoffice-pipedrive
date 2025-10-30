@@ -70,13 +70,13 @@ module.exports = {
                 "smoke-light": "rgba(0, 0, 0, 0.4)",
                 dark: {
                     bg: "#1e2029",
-                    surface: "#2d2d2d",
-                    border: "#3d444d",
-                    text: "#E2E2E4",
-                    muted: "#a3a3a3",
-                    primary: "#3C824E",
-                    hover: "#2A2C35",
-                    selected: "#3D444DB3"
+                    surface: "#282C34",
+                    border: "#444D56",
+                    text: "#E6E6E8",
+                    muted: "#B0B0B3",
+                    primary: "#4CAF50",
+                    hover: "#2C3038",
+                    selected: "#3E444D"
                 }
             },
             screens: {

@@ -67,7 +67,7 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
           message: t(
             "snackbar.fileremoved.ok",
             `File ${file.name} has been removed`,
-            { file: file.name }
+            { file: file.name },
           ),
         });
       })
@@ -77,7 +77,7 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
           message: t(
             "snackbar.fileremoved.error",
             `Could not remove file ${file.name}`,
-            { file: file.name }
+            { file: file.name },
           ),
         });
       });
@@ -94,7 +94,7 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
           win.location.href = `/editor?token=${token.token}&deal_id=${
             parameters.get("selectedIds") || "1"
           }&id=${file.id}&name=${`${encodeURIComponent(
-            name.substring(0, 190)
+            name.substring(0, 190),
           )}.${ext}`}&key=${md5(file.id + file.update_time)}&lng=${
             i18next.language
           }&dark=${isDark}`;
@@ -114,7 +114,7 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
         message: t(
           "snackbar.filedownload.error",
           `Could not download file ${file.name}`,
-          { file: file.name }
+          { file: file.name },
         ),
       });
     } finally {

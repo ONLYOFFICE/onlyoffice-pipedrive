@@ -98,6 +98,7 @@ func (s *PipedriveHTTPService) InitializeRoutes() {
 				pr.Get("/config", s.apiController.BuildGetConfig())
 				pr.Post("/settings", s.apiController.BuildPostSettings())
 				pr.Get("/settings", s.apiController.BuildGetSettings())
+				pr.Get("/settings/check", s.apiController.BuildCheckSettings())
 			})
 		})
 

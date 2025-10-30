@@ -43,14 +43,16 @@ export const OnlyofficeButton: React.FC<ButtonProps> = ({
       !primary,
     "min-w-[62px] h-[32px]": true,
     "w-full": fullWidth,
+    "cursor-pointer": !disabled,
     "bg-opacity-50 cursor-not-allowed": disabled,
+    "dark:opacity-40 dark:brightness-75": disabled,
   });
 
   return (
     <button
       type="button"
       disabled={disabled}
-      className={`flex justify-center items-center p-3 text-sm lg:text-base font-bold rounded-md cursor-pointer ${classes} truncate text-ellipsis`}
+      className={`flex justify-center items-center p-3 text-sm lg:text-base font-bold rounded-md ${classes} truncate text-ellipsis`}
       onClick={onClick}
     >
       {text}

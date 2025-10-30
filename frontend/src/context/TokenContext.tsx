@@ -56,10 +56,10 @@ export const TokenProvider: React.FC<ProviderProps> = ({ children }) => {
               const token = await getMe(sdk);
               const resp = await getPipedriveMe(
                 `${url}api/v1/users/me`,
-                token.response.access_token
+                token.response.access_token,
               );
               await i18next.changeLanguage(
-                `${resp.data.language.language_code}-${resp.data.language.country_code}`
+                `${resp.data.language.language_code}-${resp.data.language.country_code}`,
               );
               AuthToken.access_token = token.response.access_token;
               AuthToken.expires_at = token.response.expires_at;
@@ -78,7 +78,7 @@ export const TokenProvider: React.FC<ProviderProps> = ({ children }) => {
           }
           timerID = setTimeout(
             update,
-            AuthToken.expires_at - Date.now() - 1000 * 30
+            AuthToken.expires_at - Date.now() - 1000 * 30,
           );
         }, 0);
       })
@@ -86,5 +86,5 @@ export const TokenProvider: React.FC<ProviderProps> = ({ children }) => {
 
     return () => clearTimeout(timerID);
   }, []);
-  return <TokenContext.Provider value={true}>{children}</TokenContext.Provider>;
+  return <TokenContext.Provider value>{children}</TokenContext.Provider>;
 };
