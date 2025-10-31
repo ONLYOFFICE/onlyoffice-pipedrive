@@ -26,12 +26,14 @@ import (
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/middleware"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 type PipedriveHTTPService struct {
 	apiController     controller.ApiController
 	authController    controller.AuthController
 	fileController    controller.FileController
+	pluginController  controller.PluginController
 	authMiddleware    middleware.AuthMiddleware
 	contextMiddleware middleware.ContextMiddleware
 	mux               *chi.Mux
@@ -42,6 +44,7 @@ func NewServer(
 	apiController controller.ApiController,
 	authController controller.AuthController,
 	fileController controller.FileController,
+	pluginController controller.PluginController,
 	authMiddleware middleware.AuthMiddleware,
 	contextMiddleware middleware.ContextMiddleware,
 ) shttp.ServerEngine {
@@ -49,6 +52,7 @@ func NewServer(
 		apiController:     apiController,
 		authController:    authController,
 		fileController:    fileController,
+		pluginController:  pluginController,
 		authMiddleware:    authMiddleware,
 		contextMiddleware: contextMiddleware,
 		mux:               chi.NewRouter(),
@@ -105,6 +109,17 @@ func (s *PipedriveHTTPService) InitializeRoutes() {
 		r.Route("/files", func(fr chi.Router) {
 			fr.Get("/download", s.fileController.BuildGetDownloadUrl())
 			fr.Get("/create", s.contextMiddleware.Protect(s.fileController.BuildGetFile()))
+		})
+
+		r.Route("/plugins", func(pr chi.Router) {
+			pr.Use(cors.Handler(cors.Options{
+				AllowedOrigins:   []string{"*"},
+				AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+				AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With", "Origin"},
+				AllowCredentials: false,
+				MaxAge:           86400,
+			}))
+			pr.Handle("/aiautofill/*", s.pluginController.BuildServePlugin())
 		})
 	})
 }

@@ -8,3 +8,7 @@
 [submodule "backend/services/shared/format"]
 	path = backend/services/shared/format
 	url = https://github.com/ONLYOFFICE/document-formats.git
+[submodule "backend/services/gateway/assets/aiautofill"]
+	path = backend/services/gateway/assets/aiautofill
+	url = https://github.com/ONLYOFFICE/plugin-aiautofill.git
+	branch = develop

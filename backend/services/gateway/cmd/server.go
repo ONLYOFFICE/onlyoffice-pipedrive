@@ -55,6 +55,7 @@ func Server() *cli.Command {
 				controller.NewApiController,
 				controller.NewAuthController,
 				controller.NewFileController,
+				controller.NewPluginController,
 				middleware.BuildHandleAuthMiddleware,
 				middleware.BuildHandleContextMiddleware,
 				client.NewCommandClient,
