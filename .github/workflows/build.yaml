@@ -57,7 +57,10 @@ jobs:
       - name: Make aiautofill
         if: ${{ matrix.service == 'gateway' }}
         working-directory: ./backend/services/gateway/assets/aiautofill
-        run: make
+        run: |
+          npm install -g terser
+          npm install -g html-minifier-terser
+          make
 
       - name: Login to Container Registry
         uses: docker/login-action@v3
