@@ -83,84 +83,76 @@ export const OnlyofficeDragDrop: React.FC<DragDropProps> = ({
   subtext = "File size is limited",
   errorTimeout = 4000,
 }) => {
-  const [uploading, setUploading] = useState<boolean>(() => false);
   const [error, setError] = useState<boolean>(false);
   const uploadRef = React.useRef<HTMLInputElement | null>(null);
 
   const uploadFile = async (
-    file: File | undefined,
+    files: File[],
     event: DropEvent,
-    rejection?: FileRejection,
+    rejections: FileRejection[],
   ) => {
     setError(false);
-    setUploading(true);
-    if (file) {
+    if (files.length > 0) {
       try {
-        await onDrop([file], rejection ? [rejection] : [], event);
+        await onDrop(files, rejections, event);
       } catch {
         setError(true);
         setTimeout(() => setError(false), errorTimeout);
-      } finally {
-        setUploading(false);
       }
     }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (files, rejections, event) => {
-      uploadFile(files[0], event, rejections[0]);
+      uploadFile(files, event, rejections);
     },
     noClick: true,
     noKeyboard: true,
+    multiple: true,
   });
 
   const style = cx({
     "flex flex-col items-center justify-center p-5": true,
     "border-2 border-slate-300 dark:border-dark-border border-dashed rounded-lg": true,
-    "bg-transparent bg-opacity-20 text-black dark:text-dark-text": true,
+    "bg-transparent text-black dark:text-dark-text": true,
     "transition-all transition-timing-function: ease-in-out": true,
     "transition-duration: 300ms": true,
-    "bg-sky-100 dark:bg-sky-900": isDragActive,
-    "bg-emerald-100 dark:bg-emerald-900": uploading,
-    "bg-red-100 dark:bg-red-900": error,
+    "bg-sky-50 dark:bg-sky-900/20": isDragActive,
+    "bg-red-50 dark:bg-red-900/20": error,
   });
 
   return (
     <div className={`${style} w-full h-full`} {...getRootProps()}>
       <UploadIcon />
       {error && (
-        <span className="font-sans font-semibold text-sm text-center text-black dark:text-dark-text">
+        <span className="font-sans font-semibold text-sm text-center text-black dark:text-dark-text mt-4">
           {errorText}
         </span>
       )}
-      {uploading && !error && (
-        <span className="font-sans font-semibold text-sm text-center text-black dark:text-dark-text">
-          {uploadingText}
-        </span>
-      )}
-      {!uploading && !error && (
+      {!error && (
         <>
           <input {...getInputProps()} />
           <input
             type="file"
             id="file"
             ref={uploadRef}
+            multiple
             style={{ display: "none" }}
-            onChange={(e) => uploadFile(e.target?.files?.[0], e)}
+            onChange={(e) => uploadFile(Array.from(e.target?.files || []), e, [])}
           />
-          <div className="font-sans font-semibold text-sm flex flex-wrap justify-center w-full">
+          <div className="font-sans font-semibold text-sm flex flex-wrap justify-center w-full mt-4">
             <button
               type="button"
-              className="cursor-pointer outline-none border-b-2 border-dashed border-blue-500 text-blue-500 mr-1 max-w-max text-ellipsis truncate"
+              className="cursor-pointer outline-none border-b border-blue-500 text-blue-500 mr-1 hover:border-blue-600 hover:text-blue-600"
               onClick={() => uploadRef.current?.click()}
             >
               {selectText}
             </button>
-            <span className="text-center max-w-max text-ellipsis truncate text-black dark:text-dark-text">
+            <span className="text-center text-gray-700 dark:text-dark-text">
               {dragdropText}
             </span>
           </div>
-          <span className="font-sans font-normal text-xs text-gray-400 dark:text-dark-muted text-center max-w-max text-ellipsis truncate">
+          <span className="font-sans font-normal text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
             {subtext}
           </span>
         </>

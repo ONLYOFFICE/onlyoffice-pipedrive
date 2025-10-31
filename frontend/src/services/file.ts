@@ -105,7 +105,12 @@ export const deleteFile = async (
   return res.status === 200;
 };
 
-export const uploadFile = async (url: string, deal: string, file: File) => {
+export const uploadFile = async (
+  url: string,
+  deal: string,
+  file: File,
+  signal?: AbortSignal,
+) => {
   const form = new FormData();
   form.append("file", file);
   form.append("deal_id", deal);
@@ -119,6 +124,7 @@ export const uploadFile = async (url: string, deal: string, file: File) => {
       Authorization: `Bearer ${AuthToken.access_token}`,
     },
     data: form,
+    signal,
   });
 
   return res.data;

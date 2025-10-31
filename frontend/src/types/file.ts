@@ -16,6 +16,16 @@
  *
  */
 
+export type FileStatus = "uploading" | "success" | "error" | "cancelled";
+
+export interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  status: FileStatus;
+  backendFileId?: number;
+}
+
 export type File = {
   id: string;
   user_id: number;
