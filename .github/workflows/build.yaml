@@ -53,6 +53,11 @@ jobs:
           MODAL_ID=$(jq -r '.inputs.create_modal_id' $GITHUB_EVENT_PATH)
           echo ::add-mask::${MODAL_ID}
           echo "CUSTOM_MODAL_ID=${MODAL_ID}" >> "$GITHUB_ENV"
+      
+      - name: Make aiautofill
+        if: ${{ matrix.service == 'gateway' }}
+        working-directory: ./backend/services/gateway/assets/aiautofill
+        run: make
 
       - name: Login to Container Registry
         uses: docker/login-action@v3
