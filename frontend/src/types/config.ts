@@ -63,7 +63,10 @@ type EditorConfig = {
 
 type Plugins = {
   autostart: string[];
-  options: any;
+  options: {
+    all?: object;
+    pluginGuid: object;
+  };
   pluginsData: string[];
   url: string;
 };

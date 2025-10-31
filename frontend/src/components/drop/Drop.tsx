@@ -77,7 +77,6 @@ const UploadIcon: React.FC = () => (
 export const OnlyofficeDragDrop: React.FC<DragDropProps> = ({
   onDrop,
   errorText = "Could not upload your file. Please contact ONLYOFFICE support.",
-  uploadingText = "Uploading...",
   selectText = "Select a file",
   dragdropText = "or drag and drop here",
   subtext = "File size is limited",
@@ -138,7 +137,9 @@ export const OnlyofficeDragDrop: React.FC<DragDropProps> = ({
             ref={uploadRef}
             multiple
             style={{ display: "none" }}
-            onChange={(e) => uploadFile(Array.from(e.target?.files || []), e, [])}
+            onChange={(e) =>
+              uploadFile(Array.from(e.target?.files || []), e, [])
+            }
           />
           <div className="font-sans font-semibold text-sm flex flex-wrap justify-center w-full mt-4">
             <button

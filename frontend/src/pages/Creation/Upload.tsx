@@ -16,7 +16,6 @@
  *
  */
 
-import { FileRejection, DropEvent } from "react-dropzone";
 import React, { useEffect, useState } from "react";
 import AppExtensionsSDK, { Command } from "@pipedrive/app-extensions-sdk";
 import { useTranslation } from "react-i18next";
@@ -38,11 +37,7 @@ const DropZone: React.FC<{
   selectText: string;
   dragdropText: string;
   subtext: string;
-  onDrop: (
-    files: File[],
-    rejections: FileRejection[],
-    event: DropEvent,
-  ) => Promise<void>;
+  onDrop: (files: File[]) => Promise<void>;
 }> = ({
   errorText,
   uploadingText,
@@ -50,28 +45,25 @@ const DropZone: React.FC<{
   dragdropText,
   subtext,
   onDrop,
-}) => {
-  return (
-    <div className="h-48 flex-shrink-0">
-      <OnlyofficeDragDrop
-        errorText={errorText}
-        uploadingText={uploadingText}
-        selectText={selectText}
-        dragdropText={dragdropText}
-        subtext={subtext}
-        onDrop={onDrop}
-      />
-    </div>
-  );
-};
+}) => (
+  <div className="h-48 flex-shrink-0">
+    <OnlyofficeDragDrop
+      errorText={errorText}
+      uploadingText={uploadingText}
+      selectText={selectText}
+      dragdropText={dragdropText}
+      subtext={subtext}
+      onDrop={onDrop}
+    />
+  </div>
+);
 
 const FilesList: React.FC<{
   files: UploadedFile[];
   onRemoveFile: (fileId: string) => void;
   onCancelUpload: (fileId: string) => void;
 }> = ({ files, onRemoveFile, onCancelUpload }) => {
-  if (files.length === 0)
-    return null;
+  if (files.length === 0) return null;
 
   return (
     <div className="mt-4 flex-1 overflow-y-auto">
@@ -112,7 +104,9 @@ export const Upload: React.FC = () => {
         return updated;
       });
       setUploadedFiles((prev) =>
-        prev.map((f) => (f.id === fileId ? { ...f, status: "cancelled" as FileStatus } : f))
+        prev.map((f) =>
+          f.id === fileId ? { ...f, status: "cancelled" as FileStatus } : f,
+        ),
       );
     }
   };
@@ -150,7 +144,7 @@ export const Upload: React.FC = () => {
           width: 622,
         });
       }
-      
+
       return updated;
     });
   };
@@ -208,14 +202,17 @@ export const Upload: React.FC = () => {
         ),
       );
       return { success: true, fileName: file.name };
-    } catch (error: any) {
+    } catch (error: unknown) {
       setAbortControllers((prev) => {
         const updated = new Map(prev);
         updated.delete(fileId);
         return updated;
       });
 
-      if (error.code === "ERR_CANCELED" || error.name === "CanceledError") {
+      if (
+        (error as { code?: string; name?: string }).code === "ERR_CANCELED" ||
+        (error as { code?: string; name?: string }).name === "CanceledError"
+      ) {
         return { success: false, fileName: file.name, cancelled: true };
       }
 
@@ -243,9 +240,7 @@ export const Upload: React.FC = () => {
       failed: results
         .filter((r) => !r.success && !r.cancelled)
         .map((r) => r.fileName),
-      cancelled: results
-        .filter((r) => r.cancelled)
-        .map((r) => r.fileName),
+      cancelled: results.filter((r) => r.cancelled).map((r) => r.fileName),
     };
   };
 
@@ -257,11 +252,9 @@ export const Upload: React.FC = () => {
       await sdk?.execute(Command.SHOW_SNACKBAR, {
         message:
           successful.length === 1
-            ? t(
-                "snackbar.uploaded.ok",
-                "File {{file}} has been uploaded",
-                { file: successful[0] },
-              )
+            ? t("snackbar.uploaded.ok", "File {{file}} has been uploaded", {
+                file: successful[0],
+              })
             : t(
                 "snackbar.uploaded.multiple.ok",
                 "{{count}} files have been uploaded successfully",
@@ -274,11 +267,9 @@ export const Upload: React.FC = () => {
       await sdk?.execute(Command.SHOW_SNACKBAR, {
         message:
           failed.length === 1
-            ? t(
-                "snackbar.uploaded.error",
-                "Could not upload file {{file}}",
-                { file: failed[0] },
-              )
+            ? t("snackbar.uploaded.error", "Could not upload file {{file}}", {
+                file: failed[0],
+              })
             : t(
                 "snackbar.uploaded.multiple.error",
                 "Could not upload {{count}} file(s)",
@@ -312,11 +303,7 @@ export const Upload: React.FC = () => {
     await showUploadNotifications(successful, failed);
   };
 
-  const handleDrop = async (
-    files: File[],
-    _rejections: FileRejection[],
-    _event: DropEvent,
-  ) => {
+  const handleDrop = async (files: File[]) => {
     try {
       await handleFilesUpload(files);
       return Promise.resolve();
@@ -353,7 +340,8 @@ export const Upload: React.FC = () => {
               "upload.subtext",
               "File size must not exceed 20MB. Max {{count}} files at once",
               { count: MAX_FILES_LIMIT },
-            ) || `File size must not exceed 20MB. Max ${MAX_FILES_LIMIT} files at once`
+            ) ||
+            `File size must not exceed 20MB. Max ${MAX_FILES_LIMIT} files at once`
           }
           onDrop={handleDrop}
         />

@@ -34,7 +34,7 @@ import Icon from "@assets/nofile.svg";
 
 declare global {
   interface Window {
-    connector: any;
+    connector: unknown;
   }
 }
 
@@ -89,7 +89,7 @@ export const OnlyofficeEditorPage: React.FC = () => {
         );
       }
     }
-    const connector = window.DocEditor.instances["docxEditor"].createConnector();
+    const connector = window.DocEditor.instances.docxEditor.createConnector();
     window.connector = connector;
   };
 

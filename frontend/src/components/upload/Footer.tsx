@@ -23,12 +23,10 @@ import { OnlyofficeButton } from "@components/button";
 export const Footer: React.FC<{
   closeButtonText: string;
   onClose: () => void;
-}> = ({ closeButtonText, onClose }) => {
-  return (
-    <div className="h-[48px] flex items-center w-full bg-white dark:bg-dark-bg border-t dark:border-dark-border">
-      <div className="flex justify-between items-center w-full px-5">
-        <OnlyofficeButton text={closeButtonText} onClick={onClose} />
-      </div>
+}> = ({ closeButtonText, onClose }) => (
+  <div className="h-[48px] flex items-center w-full bg-white dark:bg-dark-bg border-t dark:border-dark-border">
+    <div className="flex justify-between items-center w-full px-5">
+      <OnlyofficeButton text={closeButtonText} onClick={onClose} />
     </div>
-  );
-};
+  </div>
+);
