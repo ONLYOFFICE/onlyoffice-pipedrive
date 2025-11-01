@@ -1,7 +1,8 @@
 ﻿{
     "banner.title": "ONLYOFFICE Docs Cloud",
     "banner.subtitle": " Lancez facilement les éditeurs dans le cloud sans téléchargement ni installation",
-    "files.error.nofiles": "Impossible de trouver les documents Pipedrive",
+    "files.error.nofiles": "No docs here yet FR",
+    "files.error.nofiles.subtitle": "Any files you create or upload will show up here. FR",
     "files.info.workspace": "Espace de travail",
     "files.info.type": "Type",
     "files.info.modified": "Date de modification",

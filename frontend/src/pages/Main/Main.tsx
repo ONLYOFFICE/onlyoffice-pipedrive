@@ -170,7 +170,11 @@ export const Main: React.FC = () => {
         )}
         {!isLoading && (!files || files.length === 0) && (
           <OnlyofficeNoFile
-            title={t("files.error.nofiles", "Could not find Pipedrive files")}
+            title={t("files.error.nofiles", "No docs here yet")}
+            subtitle={t(
+              "files.error.nofiles.subtitle",
+              "Any files you create or upload will show up here.",
+            )}
           />
         )}
         {!isLoading &&
