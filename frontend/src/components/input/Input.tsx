@@ -26,11 +26,13 @@ type InputProps = {
   placeholder?: string;
   type?: "text" | "password";
   errorText?: string;
+  hintText?: string;
   valid?: boolean;
   disabled?: boolean;
   textSize?: "sm" | "xs";
   labelSize?: "sm" | "xs";
   autocomplete?: boolean;
+  required?: boolean;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
 };
 
@@ -40,11 +42,13 @@ export const OnlyofficeInput: React.FC<InputProps> = ({
   placeholder,
   type = "text",
   errorText = "Please fill out this field",
+  hintText,
   valid = true,
   disabled = false,
   textSize = "sm",
   labelSize = "xs",
   autocomplete = false,
+  required = false,
   onChange,
 }) => {
   const istyle = cx({
@@ -66,12 +70,13 @@ export const OnlyofficeInput: React.FC<InputProps> = ({
         className={`font-semibold text-${labelSize} text-gray-700 dark:text-dark-text py-2`}
       >
         {text}
+        {required && <span className="text-red-600">*</span>}
       </label>
       <input
         value={value}
         placeholder={placeholder}
         className={istyle}
-        required
+        required={required}
         autoCorrect={autocomplete ? undefined : "off"}
         autoComplete={autocomplete ? undefined : "off"}
         type={type}
@@ -79,6 +84,11 @@ export const OnlyofficeInput: React.FC<InputProps> = ({
         disabled={disabled}
       />
       <p className={`text-red-600 text-xs ${pstyle}`}>{errorText}</p>
+      {hintText && (
+        <p className="text-xs text-gray-500 dark:text-dark-muted mt-1">
+          {hintText}
+        </p>
+      )}
     </div>
   );
 };
