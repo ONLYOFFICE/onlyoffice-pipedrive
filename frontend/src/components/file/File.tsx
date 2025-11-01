@@ -30,6 +30,9 @@ type FileProps = {
   actions?: React.ReactNode;
   children?: React.ReactNode;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  isRenaming?: boolean;
+  onRenameSubmit?: (newName: string) => void;
+  onRenameCancel?: () => void;
 };
 
 export const OnlyofficeFile: React.FC<FileProps> = ({
@@ -39,9 +42,47 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
   actions,
   children,
   onClick,
+  isRenaming = false,
+  onRenameSubmit,
+  onRenameCancel,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [renameValue, setRenameValue] = useState(name);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const { isDark } = useTheme();
+
+  React.useEffect(() => {
+    if (isRenaming && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  React.useEffect(() => {
+    setRenameValue(name);
+  }, [name]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onRenameSubmit?.(renameValue.trim());
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onRenameCancel?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isRenaming) {
+      const trimmedValue = renameValue.trim();
+      if (trimmedValue !== "" && trimmedValue !== name) {
+        onRenameSubmit?.(trimmedValue);
+      } else {
+        onRenameCancel?.();
+      }
+    }
+  };
+
   return (
     <>
       <div className="flex items-center w-full border-b dark:border-dark-border py-2 my-1">
@@ -66,16 +107,29 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
           <div className="w-[32px] h-[32px]">
             <Icon />
           </div>
-          <button
-            className={`${
-              supported && onClick ? "cursor-pointer" : "cursor-default"
-            } text-left font-semibold font-sans md:text-sm text-xs px-2 w-[170px] h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text`}
-            type="button"
-            title={name}
-            onClick={onClick}
-          >
-            {name}
-          </button>
+          {isRenaming ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              className="text-left font-semibold font-sans md:text-sm text-xs px-2 w-[170px] h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
+            />
+          ) : (
+            <button
+              className={`${
+                supported && onClick ? "cursor-pointer" : "cursor-default"
+              } text-left font-semibold font-sans md:text-sm text-xs px-2 w-[170px] h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text`}
+              type="button"
+              title={name}
+              onClick={onClick}
+              disabled={isRenaming}
+            >
+              {name}
+            </button>
+          )}
         </div>
         <div className="flex items-center justify-end w-1/3">{actions}</div>
       </div>

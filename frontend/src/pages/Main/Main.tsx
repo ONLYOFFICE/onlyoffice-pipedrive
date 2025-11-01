@@ -32,6 +32,7 @@ import { OnlyofficeSpinner } from "@components/spinner";
 import { OnlyofficeBackgroundError } from "@layouts/ErrorBackground";
 
 import { useFileSearch } from "@hooks/useFileSearch";
+import { useRenameFile } from "@hooks/useRenameFile";
 
 import { checkSettings } from "@services/settings";
 
@@ -48,11 +49,62 @@ export const Main: React.FC = () => {
   const [settingsConfigured, setSettingsConfigured] = useState<boolean | null>(
     null,
   );
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const renameMutator = useRenameFile();
   const { isLoading, fetchNextPage, isFetchingNextPage, files, hasNextPage } =
     useFileSearch(
       `${url}api/v1/deals/${parameters.get("selectedIds")}/files`,
       20,
     );
+
+  const handleRenameSubmit = async (
+    fileId: string,
+    fileName: string,
+    newName: string,
+  ) => {
+    if (newName === "") {
+      await sdk?.execute(Command.SHOW_SNACKBAR, {
+        message: t("rename.error.empty", "File name cannot be empty"),
+      });
+      setRenamingFileId(null);
+      return;
+    }
+
+    if (newName.length > 255) {
+      await sdk?.execute(Command.SHOW_SNACKBAR, {
+        message: t(
+          "rename.error.toolong",
+          "File name is too long (max 255 characters)",
+        ),
+      });
+      setRenamingFileId(null);
+      return;
+    }
+
+    if (newName === fileName) {
+      setRenamingFileId(null);
+      return;
+    }
+
+    renameMutator
+      .mutateAsync({ url: `${url}api/v1/files/${fileId}`, name: newName })
+      .then(async () => {
+        await sdk?.execute(Command.SHOW_SNACKBAR, {
+          message: t("snackbar.filerenamed.ok", "File renamed successfully"),
+        });
+        setRenamingFileId(null);
+      })
+      .catch(async () => {
+        await sdk?.execute(Command.SHOW_SNACKBAR, {
+          message: t(
+            "snackbar.filerenamed.error",
+            `Could not rename file ${fileName}`,
+            { file: fileName },
+          ),
+        });
+        setRenamingFileId(null);
+      });
+  };
 
   const observer = useRef<IntersectionObserver | null>(null);
   const lastItem = useCallback(
@@ -132,7 +184,18 @@ export const Main: React.FC = () => {
                     Icon={getFileIcon(file.name)}
                     name={file.name}
                     supported={isFileSupported(file.name)}
-                    actions={<OnlyofficeFileActions file={file} />}
+                    actions={
+                      <OnlyofficeFileActions
+                        file={file}
+                        onRenameClick={() => setRenamingFileId(file.id)}
+                        isRenaming={renamingFileId === file.id}
+                      />
+                    }
+                    isRenaming={renamingFileId === file.id}
+                    onRenameSubmit={(newName) =>
+                      handleRenameSubmit(file.id, file.name, newName)
+                    }
+                    onRenameCancel={() => setRenamingFileId(null)}
                   >
                     <OnlyofficeFileInfo
                       info={{
@@ -159,7 +222,18 @@ export const Main: React.FC = () => {
                   Icon={getFileIcon(file.name)}
                   name={file.name}
                   supported={isFileSupported(file.name)}
-                  actions={<OnlyofficeFileActions file={file} />}
+                  actions={
+                    <OnlyofficeFileActions
+                      file={file}
+                      onRenameClick={() => setRenamingFileId(file.id)}
+                      isRenaming={renamingFileId === file.id}
+                    />
+                  }
+                  isRenaming={renamingFileId === file.id}
+                  onRenameSubmit={(newName) =>
+                    handleRenameSubmit(file.id, file.name, newName)
+                  }
+                  onRenameCancel={() => setRenamingFileId(null)}
                 >
                   <OnlyofficeFileInfo
                     info={{

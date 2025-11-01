@@ -129,3 +129,26 @@ export const uploadFile = async (
 
   return res.data;
 };
+
+export const renameFile = async (
+  url: string,
+  name: string,
+  signal: AbortSignal | undefined = undefined,
+) => {
+  const params = new URLSearchParams();
+  params.append("name", name);
+
+  const res = await axios({
+    method: "PUT",
+    url,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Bearer ${AuthToken.access_token}`,
+    },
+    data: params,
+    signal,
+    timeout: 4500,
+  });
+
+  return res.status === 200;
+};

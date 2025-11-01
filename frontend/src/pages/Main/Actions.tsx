@@ -38,18 +38,26 @@ import Download from "@assets/download.svg";
 import DownloadDark from "@assets/download_dark.svg";
 import Trash from "@assets/trash.svg";
 import TrashDark from "@assets/trash_dark.svg";
+import Rename from "@assets/rename.svg";
+import RenameDark from "@assets/rename_dark.svg";
 
 type FileActionsProps = {
   file: File;
+  onRenameClick: () => void;
+  isRenaming?: boolean;
 };
 
-export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
+export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({
+  file,
+  onRenameClick,
+  isRenaming = false,
+}) => {
   const { t } = useTranslation();
   const { url, parameters } = getCurrentURL();
   const { isDark } = useTheme();
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
   const [disable, setDisable] = useState(false);
-  const mutator = useDeleteFile(`${url}api/v1/files/${file.id}`);
+  const deleteMutator = useDeleteFile(`${url}api/v1/files/${file.id}`);
 
   useEffect(() => {
     new AppExtensionsSDK()
@@ -60,7 +68,7 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
 
   const handleDelete = () => {
     setDisable(true);
-    mutator
+    deleteMutator
       .mutateAsync()
       .then(async () => {
         await sdk?.execute(Command.SHOW_SNACKBAR, {
@@ -81,6 +89,12 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
           ),
         });
       });
+  };
+
+  const handleRename = () => {
+    if (!disable) {
+      onRenameClick();
+    }
   };
 
   const handleEditor = async () => {
@@ -140,9 +154,10 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
     }
   };
 
-  const isEditorDisabled = !isFileSupported(file.name) || disable;
-  const isDownloadDisabled = disable;
-  const isDeleteDisabled = disable;
+  const isEditorDisabled = !isFileSupported(file.name) || disable || isRenaming;
+  const isDownloadDisabled = disable || isRenaming;
+  const isRenameDisabled = disable || isRenaming;
+  const isDeleteDisabled = disable || isRenaming;
 
   return (
     <>
@@ -159,6 +174,20 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
         aria-disabled={isEditorDisabled}
       >
         {isDark ? <PencilDark /> : <Pencil />}
+      </div>
+      <div
+        role="button"
+        tabIndex={isRenameDisabled ? -1 : 0}
+        className={`mx-1 ${
+          isRenameDisabled
+            ? "hover:cursor-default opacity-50"
+            : "hover:cursor-pointer"
+        }`}
+        onClick={handleClick(handleRename)}
+        onKeyDown={handleKeyDown(handleRename)}
+        aria-disabled={isRenameDisabled}
+      >
+        {isDark ? <RenameDark /> : <Rename />}
       </div>
       <div
         role="button"
