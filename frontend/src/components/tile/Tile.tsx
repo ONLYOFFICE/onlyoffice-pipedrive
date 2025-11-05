@@ -19,12 +19,13 @@
 import React from "react";
 import cx from "classnames";
 
-type TileProps = {
+export type TileProps = {
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   text: string;
   size?: "xs" | "sm";
   selected?: boolean;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
+  onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
 };
 
@@ -34,14 +35,15 @@ export const OnlyofficeTile: React.FC<TileProps> = ({
   size = "xs",
   selected = false,
   onClick,
+  onDoubleClick,
   onKeyDown,
 }) => {
   const card = cx({
-    "px-5 py-3.5 rounded-lg transform shadow mb-5 outline-none": true,
+    "px-5 py-3.5 rounded-lg transform shadow mb-0 outline-none": true,
     "transition duration-100 ease-linear": true,
     "h-[82px]": true,
     "max-h-36 flex flex-col justify-center": true,
-    "border border-gray-300 dark:border-dark-border": true,
+    "border border-[#C8CCD2] dark:border-dark-border": true,
     "hover:bg-gray-100 dark:hover:bg-dark-hover cursor-pointer": !selected,
     "bg-white dark:bg-dark-bg": !selected,
     "bg-gray-200 dark:bg-dark-selected": selected,
@@ -50,7 +52,7 @@ export const OnlyofficeTile: React.FC<TileProps> = ({
   const spn = cx({
     "text-sm": size === "sm",
     "text-xs text-[9px]": size === "xs",
-    "font-semibold text-slate-500 dark:text-dark-muted": true,
+    "font-semibold text-[#21232C] dark:text-dark-muted": true,
     "overflow-hidden whitespace-nowrap inline-block text-ellipsis": true,
   });
 
@@ -60,6 +62,7 @@ export const OnlyofficeTile: React.FC<TileProps> = ({
       tabIndex={0}
       className={card}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       onKeyDown={onKeyDown}
     >
       <div className="flex items-center justify-center px-1 py-1">

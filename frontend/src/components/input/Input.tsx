@@ -20,7 +20,7 @@
 import React from "react";
 import cx from "classnames";
 
-type InputProps = {
+export type InputProps = {
   text: string;
   value?: string;
   placeholder?: string;
@@ -34,6 +34,7 @@ type InputProps = {
   autocomplete?: boolean;
   required?: boolean;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 };
 
 export const OnlyofficeInput: React.FC<InputProps> = ({
@@ -50,6 +51,7 @@ export const OnlyofficeInput: React.FC<InputProps> = ({
   autocomplete = false,
   required = false,
   onChange,
+  onKeyDown,
 }) => {
   const istyle = cx({
     "font-normal text-sm text-gray-700 dark:text-dark-text appearance-none block select-auto": true,
@@ -81,6 +83,7 @@ export const OnlyofficeInput: React.FC<InputProps> = ({
         autoComplete={autocomplete ? undefined : "off"}
         type={type}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         disabled={disabled}
       />
       <p className={`text-red-600 text-xs ${pstyle}`}>{errorText}</p>

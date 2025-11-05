@@ -17,7 +17,6 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import md5 from "md5";
 import AppExtensionsSDK, { Command } from "@pipedrive/app-extensions-sdk";
 import { useTranslation } from "react-i18next";
@@ -28,10 +27,40 @@ import { OnlyofficeInput } from "@components/input";
 import { OnlyofficeTile } from "@components/tile";
 import { OnlyofficeTitle } from "@components/title";
 
+import { createFile } from "@services/file";
+
 import { getFileIcon } from "@utils/file";
 import { getCurrentURL } from "@utils/url";
 
 import Redirect from "@assets/redirect.svg";
+
+const HelpText: React.FC = () => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="text-xs text-gray-600 dark:text-gray-400 mt-4 text-left leading-relaxed">
+      {t("creation.help.text", "Help us improve the ONLYOFFICE app:")}{" "}
+      <a
+        href="https://feedback.onlyoffice.com/forums/966080-your-voice-matters?category_id=519288"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-gray-600 dark:text-blue-500 underline hover:text-gray-800 dark:hover:text-blue-400"
+      >
+        {t("creation.help.feedback", "share your feedback")}
+      </a>
+      . {t("creation.help.visit", "Visit our")}{" "}
+      <a
+        href="https://helpcenter.onlyoffice.com/integration/pipedrive.aspx"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-gray-600 dark:text-blue-500 underline hover:text-gray-800 dark:hover:text-blue-400"
+      >
+        {t("creation.help.helpcenter", "Help Center")}
+      </a>{" "}
+      {t("creation.help.details", "for more details")}.
+    </div>
+  );
+};
 
 export const Creation: React.FC = () => {
   const { t } = useTranslation();
@@ -86,17 +115,65 @@ export const Creation: React.FC = () => {
     }
   }, [fileType, file, t]);
 
+  const handleCreateDocument = async () => {
+    if (!isFileNameValid || creating) return;
+
+    setCreating(true);
+    const token = await sdk?.execute(Command.GET_SIGNED_TOKEN);
+    if (!token) return;
+    const { parameters } = getCurrentURL();
+
+    try {
+      const filename = `${file
+        .replaceAll("/", ":")
+        .replaceAll("\\", ":")
+        .substring(0, 190)}.${fileType}`;
+
+      const fres = await createFile(
+        token.token,
+        i18next.language,
+        fileType,
+        parameters.get("selectedIds") || "",
+        filename,
+      );
+
+      window.open(
+        `/editor?token=${token.token}&id=${fres.data.id}&deal_id=${
+          fres.data.deal_id
+        }&name=${`${encodeURIComponent(
+          file.substring(0, 190),
+        )}.${fileType}`}&key=${md5(
+          fres.data.id + fres.data.update_time,
+        )}&lng=${i18next.language}`,
+      );
+      await sdk?.execute(Command.CLOSE_MODAL);
+    } catch {
+      await sdk?.execute(Command.SHOW_SNACKBAR, {
+        message: t("creation.error", "Could not create a new file"),
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
-    <div className="h-full w-full bg-white dark:bg-dark-bg">
-      <div className="h-[calc(100%-3rem)] w-full overflow-hidden">
-        <div className="px-5 flex flex-col justify-center items-start h-full">
+    <div className="h-full w-full bg-white dark:bg-dark-bg flex flex-col">
+      <div className="flex-1 w-full overflow-hidden">
+        <div className="px-5 py-5 flex flex-col h-full">
           <OnlyofficeTitle
             text={t("creation.title", "Create with ONLYOFFICE")}
             large
+            align="left"
           />
-          <div className="w-full pt-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            {t(
+              "creation.subtitle",
+              "The file will open in a new ONLYOFFICE tab and will be automatically saved to this Pipedrive deal.",
+            )}
+          </p>
+          <div className="w-full pt-6">
             <OnlyofficeInput
-              text={t("creation.inputs.title", "Title")}
+              text={t("creation.inputs.filename", "File name")}
               labelSize="sm"
               valid={isFileNameValid}
               errorText={
@@ -115,8 +192,8 @@ export const Creation: React.FC = () => {
               disabled={creating}
             />
           </div>
-          <div className="w-full flex pt-5">
-            <div className="grow">
+          <div className="w-full flex gap-4 pt-4">
+            <div className="flex-1">
               <OnlyofficeTile
                 Icon={getFileIcon("sample.docx")}
                 text={t("creation.tiles.doc", "Document")}
@@ -125,7 +202,7 @@ export const Creation: React.FC = () => {
                 selected={fileType === "docx"}
               />
             </div>
-            <div className="grow px-5">
+            <div className="flex-1">
               <OnlyofficeTile
                 Icon={getFileIcon("sample.xlsx")}
                 text={t("creation.tiles.spreadsheet", "Spreadsheet")}
@@ -134,7 +211,7 @@ export const Creation: React.FC = () => {
                 selected={fileType === "xlsx"}
               />
             </div>
-            <div className="grow">
+            <div className="flex-1">
               <OnlyofficeTile
                 Icon={getFileIcon("sample.pptx")}
                 text={t("creation.tiles.presentation", "Presentation")}
@@ -144,13 +221,14 @@ export const Creation: React.FC = () => {
               />
             </div>
           </div>
+          <HelpText />
         </div>
       </div>
       <div className="h-[48px] flex items-center w-full bg-white dark:bg-dark-bg border-t dark:border-dark-border">
         <div className="flex justify-between items-center w-full">
           <div className="mx-5">
             <OnlyofficeButton
-              text={t("button.cancel", "Cancel")}
+              text={t("button.close", "Close")}
               onClick={async () => {
                 await sdk?.execute(Command.CLOSE_MODAL);
               }}
@@ -160,52 +238,10 @@ export const Creation: React.FC = () => {
           <div className="mx-5">
             <OnlyofficeButton
               disabled={!isFileNameValid || creating}
-              text={t("button.create", "Create document")}
+              text={t("button.create", "Create")}
               primary
               Icon={<Redirect />}
-              onClick={async () => {
-                setCreating(true);
-                const token = await sdk?.execute(Command.GET_SIGNED_TOKEN);
-                if (!token) return;
-                const { parameters } = getCurrentURL();
-
-                try {
-                  const fres = await axios({
-                    method: "GET",
-                    url: `${process.env.BACKEND_GATEWAY}/files/create`,
-                    headers: {
-                      "X-Pipedrive-App-Context": token.token,
-                    },
-                    params: {
-                      lang: i18next.language,
-                      type: fileType,
-                      deal: parameters.get("selectedIds") || "",
-                      filename: `${file
-                        .replaceAll("/", ":")
-                        .replaceAll("\\", ":")
-                        .substring(0, 190)}.${fileType}`,
-                    },
-                  });
-                  window.open(
-                    `/editor?token=${token.token}&id=${
-                      fres.data.data.id
-                    }&deal_id=${
-                      fres.data.data.deal_id
-                    }&name=${`${encodeURIComponent(
-                      file.substring(0, 190),
-                    )}.${fileType}`}&key=${md5(
-                      fres.data.data.id + fres.data.data.update_time,
-                    )}&lng=${i18next.language}`,
-                  );
-                  await sdk?.execute(Command.CLOSE_MODAL);
-                } catch {
-                  await sdk?.execute(Command.SHOW_SNACKBAR, {
-                    message: t("creation.error", "Could not create a new file"),
-                  });
-                } finally {
-                  setCreating(false);
-                }
-              }}
+              onClick={handleCreateDocument}
             />
           </div>
         </div>

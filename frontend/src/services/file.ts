@@ -152,3 +152,27 @@ export const renameFile = async (
 
   return res.status === 200;
 };
+
+export const createFile = async (
+  token: string,
+  lang: string,
+  fileType: string,
+  dealId: string,
+  filename: string,
+) => {
+  const res = await axios({
+    method: "GET",
+    url: `${process.env.BACKEND_GATEWAY}/files/create`,
+    headers: {
+      "X-Pipedrive-App-Context": token,
+    },
+    params: {
+      lang,
+      type: fileType,
+      deal: dealId,
+      filename,
+    },
+  });
+
+  return res.data;
+};

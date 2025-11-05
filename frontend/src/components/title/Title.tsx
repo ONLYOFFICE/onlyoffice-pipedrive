@@ -22,14 +22,19 @@ import cx from "classnames";
 type TitleProps = {
   text: string;
   large?: boolean;
+  align?: "left" | "center" | "right";
 };
 
 export const OnlyofficeTitle: React.FC<TitleProps> = ({
   text,
   large = false,
+  align = "center",
 }) => {
   const style = cx({
-    "font-semibold text-slate-800 dark:text-dark-text text-center": !!text,
+    "font-semibold text-slate-800 dark:text-dark-text": !!text,
+    "text-center": align === "center",
+    "text-left": align === "left",
+    "text-right": align === "right",
     "text-base": large,
     "text-sm": !large,
   });
