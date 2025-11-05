@@ -63,6 +63,20 @@ func NewMongoAICodeAccessAdapter(url string, encryptor crypto.Encryptor, credent
 		log.Fatalf("mongo initialization error: %s", err.Error())
 	}
 
+	collection := mgm.Coll(&aiCodeAccessCollection{})
+	ttlIndex := mongo.IndexModel{
+		Keys: bson.M{
+			"updated_at": 1,
+		},
+		Options: options.Index().SetExpireAfterSeconds(60 * 60 * 24 * 30),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := collection.Indexes().CreateOne(ctx, ttlIndex); err != nil {
+		log.Printf("could not create TTL index: %s", err.Error())
+	}
+
 	return &mongoAICodeAccessAdapter{
 		encryptor:   encryptor,
 		credentials: credentials,
