@@ -25,6 +25,7 @@ import (
 	plog "github.com/ONLYOFFICE/onlyoffice-integration-adapters/log"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/domain"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/port"
+	"github.com/google/uuid"
 )
 
 type aiAccessService struct {
@@ -75,6 +76,51 @@ func (s aiAccessService) GetCodeAccess(ctx context.Context, code string) (domain
 	s.logger.Debugf("found AI code access: %v", codeAccess)
 
 	return codeAccess, nil
+}
+
+func (s aiAccessService) RegenerateCodeAccess(ctx context.Context, userID, fileID, dealID string) (string, error) {
+	userID = strings.TrimSpace(userID)
+	fileID = strings.TrimSpace(fileID)
+	dealID = strings.TrimSpace(dealID)
+
+	s.logger.Debugf("regenerating AI code access for user: %s, file: %s, deal: %s", userID, fileID, dealID)
+
+	if userID == "" {
+		return "", &InvalidServiceParameterError{
+			Name:   "UserID",
+			Reason: "Should not be blank",
+		}
+	}
+
+	if fileID == "" {
+		return "", &InvalidServiceParameterError{
+			Name:   "FileID",
+			Reason: "Should not be blank",
+		}
+	}
+
+	if dealID == "" {
+		return "", &InvalidServiceParameterError{
+			Name:   "DealID",
+			Reason: "Should not be blank",
+		}
+	}
+
+	newCode := uuid.New().String()
+	codeAccess := domain.AICodeAccess{
+		Code:   newCode,
+		UserID: userID,
+		FileID: fileID,
+		DealID: dealID,
+	}
+
+	if err := s.UpsertCodeAccess(ctx, codeAccess); err != nil {
+		s.logger.Errorf("failed to regenerate AI code access: %s", err.Error())
+		return "", err
+	}
+
+	s.logger.Debugf("regenerated new AI code access: %s", newCode)
+	return newCode, nil
 }
 
 func (s aiAccessService) RemoveCodeAccess(ctx context.Context, code string) error {

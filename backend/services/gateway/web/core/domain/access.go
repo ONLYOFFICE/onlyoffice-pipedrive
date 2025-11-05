@@ -26,6 +26,7 @@ import (
 type AICodeAccess struct {
 	Code   string `json:"code" mapstructure:"code"`
 	UserID string `json:"user_id" mapstructure:"user_id"`
+	FileID string `json:"file_id" mapstructure:"file_id"`
 	DealID string `json:"deal_id" mapstructure:"deal_id"`
 }
 
@@ -36,8 +37,9 @@ func (u AICodeAccess) ToJSON() []byte {
 
 func (u *AICodeAccess) Validate() error {
 	u.Code = strings.TrimSpace(u.Code)
-	u.DealID = strings.TrimSpace(u.DealID)
+	u.FileID = strings.TrimSpace(u.FileID)
 	u.UserID = strings.TrimSpace(u.UserID)
+	u.DealID = strings.TrimSpace(u.DealID)
 
 	if u.Code == "" {
 		return &InvalidModelFieldError{
@@ -51,6 +53,14 @@ func (u *AICodeAccess) Validate() error {
 		return &InvalidModelFieldError{
 			Model:  "AICodeAccess",
 			Field:  "UserID",
+			Reason: "Should not be empty",
+		}
+	}
+
+	if u.FileID == "" {
+		return &InvalidModelFieldError{
+			Model:  "AICodeAccess",
+			Field:  "FileID",
 			Reason: "Should not be empty",
 		}
 	}

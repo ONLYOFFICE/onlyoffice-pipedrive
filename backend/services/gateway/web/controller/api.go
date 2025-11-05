@@ -32,13 +32,11 @@ import (
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/config"
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/crypto"
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/log"
-	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/domain"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/port"
 	pclient "github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/client"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/client/model"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/request"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/response"
-	"github.com/google/uuid"
 	"go-micro.dev/v4/client"
 	"golang.org/x/sync/errgroup"
 )
@@ -170,23 +168,19 @@ func (c *ApiController) getAccess(ctx context.Context, code string) (request.Dat
 	userID, _ := strconv.Atoi(access.UserID)
 	return request.DataRequest{
 		UserID: userID,
+		FileID: access.FileID,
 		DealID: access.DealID,
 	}, nil
 }
 
-func (c *ApiController) regenerateAccess(ctx context.Context, userID, dealID string) (string, error) {
-	newCode := uuid.New().String()
-	access := domain.AICodeAccess{
-		Code:   newCode,
-		UserID: userID,
-		DealID: dealID,
-	}
-
-	if err := c.accessService.UpsertCodeAccess(ctx, access); err != nil {
+func (c *ApiController) regenerateAccess(ctx context.Context, userID, fileID, dealID string) (string, error) {
+	code, err := c.accessService.RegenerateCodeAccess(ctx, userID, fileID, dealID)
+	if err != nil {
 		c.logger.Errorf("could not regenerate AI access code: %s", err.Error())
 		return "", err
 	}
-	return newCode, nil
+
+	return code, nil
 }
 
 func (c *ApiController) BuildGetMe() http.HandlerFunc {
@@ -214,7 +208,7 @@ func (c *ApiController) BuildGetMe() http.HandlerFunc {
 	}
 }
 
-func (c *ApiController) fetchUserWithCode(ctx context.Context, userID, dealID string) (response.UserResponse, string, error) {
+func (c *ApiController) fetchUserWithCode(ctx context.Context, userID, fileID, dealID string) (response.UserResponse, string, error) {
 	var (
 		ures response.UserResponse
 		code string
@@ -237,7 +231,7 @@ func (c *ApiController) fetchUserWithCode(ctx context.Context, userID, dealID st
 
 	eg.Go(func() error {
 		var err error
-		code, err = c.regenerateAccess(ectx, userID, dealID)
+		code, err = c.regenerateAccess(ectx, userID, fileID, dealID)
 		if err != nil {
 			c.logger.Errorf("failed to regenerate access: %s", err.Error())
 			return err
@@ -350,7 +344,7 @@ func (c *ApiController) BuildGetData() http.HandlerFunc {
 			return
 		}
 
-		ures, code, err := c.fetchUserWithCode(ctx, fmt.Sprint(data.UserID), data.DealID)
+		ures, code, err := c.fetchUserWithCode(ctx, fmt.Sprint(data.UserID), data.FileID, data.DealID)
 		if err != nil {
 			c.writeErrorResponse(rw, http.StatusInternalServerError)
 			return
@@ -642,56 +636,36 @@ func (c *ApiController) BuildGetConfig() http.HandlerFunc {
 			resp response.BuildConfigResponse
 		)
 
-		eg, ectx := errgroup.WithContext(ctx)
-		code := uuid.New().String()
+		code, err := c.accessService.RegenerateCodeAccess(ctx, c.getUserID(pctx), id, dealID)
+		if err != nil {
+			c.logger.Errorf("could not regenerate AI access code: %s", err.Error())
+			c.handleMicroError(err, rw, http.StatusInternalServerError)
+			return
+		}
 
-		eg.Go(func() error {
-			access := domain.AICodeAccess{
-				Code:   code,
-				UserID: c.getUserID(pctx),
-				DealID: dealID,
-			}
+		err = c.client.Call(
+			ctx,
+			c.client.NewRequest(
+				fmt.Sprintf("%s:builder", c.config.Namespace),
+				"ConfigHandler.BuildConfig",
+				request.BuildConfigRequest{
+					UID:       pctx.UID,
+					CID:       pctx.CID,
+					Deal:      dealID,
+					UserAgent: r.UserAgent(),
+					Filename:  filename,
+					FileID:    id,
+					DocKey:    key,
+					Dark:      dark,
+					Code:      code,
+				},
+			),
+			&resp,
+		)
 
-			if err := c.accessService.UpsertCodeAccess(ectx, access); err != nil {
-				c.logger.Errorf("could not store AI access code: %s", err.Error())
-				return err
-			}
-			return nil
-		})
-
-		eg.Go(func() error {
-			err := c.client.Call(
-				ectx,
-				c.client.NewRequest(
-					fmt.Sprintf("%s:builder", c.config.Namespace),
-					"ConfigHandler.BuildConfig",
-					request.BuildConfigRequest{
-						UID:       pctx.UID,
-						CID:       pctx.CID,
-						Deal:      dealID,
-						UserAgent: r.UserAgent(),
-						Filename:  filename,
-						FileID:    id,
-						DocKey:    key,
-						Dark:      dark,
-						Code:      code,
-					},
-				),
-				&resp,
-			)
-			if err != nil {
-				c.logger.Errorf("could not build onlyoffice config: %s", err.Error())
-				return err
-			}
-			return nil
-		})
-
-		if err := eg.Wait(); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-				c.writeErrorResponse(rw, http.StatusRequestTimeout)
-			} else {
-				c.handleMicroError(err, rw, http.StatusInternalServerError)
-			}
+		if err != nil {
+			c.logger.Errorf("could not build onlyoffice config: %s", err.Error())
+			c.handleMicroError(err, rw, http.StatusInternalServerError)
 			return
 		}
 

@@ -27,5 +27,6 @@ import (
 type AICodeAccessService interface {
 	UpsertCodeAccess(ctx context.Context, code domain.AICodeAccess) error
 	GetCodeAccess(ctx context.Context, code string) (domain.AICodeAccess, error)
+	RegenerateCodeAccess(ctx context.Context, userID, fileID, dealID string) (string, error)
 	RemoveCodeAccess(ctx context.Context, code string) error
 }

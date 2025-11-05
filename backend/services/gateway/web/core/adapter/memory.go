@@ -38,6 +38,18 @@ func NewMemoryAICodeAccessAdapter() port.AICodeAccessServiceAdapter {
 }
 
 func (m *memoryAICodeAccessAdapter) save(code domain.AICodeAccess) error {
+	for key, buffer := range m.kvs {
+		var existing domain.AICodeAccess
+		if err := json.Unmarshal(buffer, &existing); err != nil {
+			continue
+		}
+
+		if existing.UserID == code.UserID && existing.FileID == code.FileID {
+			delete(m.kvs, key)
+			break
+		}
+	}
+
 	buffer, err := json.Marshal(code)
 
 	if err != nil {
@@ -62,6 +74,23 @@ func (m *memoryAICodeAccessAdapter) SelectCodeAccess(ctx context.Context, code s
 	}
 
 	return codeAcc, nil
+}
+
+func (m *memoryAICodeAccessAdapter) SelectCodeAccessByUserAndFile(ctx context.Context, userID, fileID string) (domain.AICodeAccess, error) {
+	var codeAcc domain.AICodeAccess
+
+	for _, buffer := range m.kvs {
+		var acc domain.AICodeAccess
+		if err := json.Unmarshal(buffer, &acc); err != nil {
+			continue
+		}
+
+		if acc.UserID == userID && acc.FileID == fileID {
+			return acc, nil
+		}
+	}
+
+	return codeAcc, errors.New("code access for this user and file doesn't exist")
 }
 
 func (m *memoryAICodeAccessAdapter) UpsertCodeAccess(ctx context.Context, code domain.AICodeAccess) error {

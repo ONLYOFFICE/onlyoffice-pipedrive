@@ -27,5 +27,6 @@ import (
 type AICodeAccessServiceAdapter interface {
 	UpsertCodeAccess(ctx context.Context, code domain.AICodeAccess) error
 	SelectCodeAccess(ctx context.Context, code string) (domain.AICodeAccess, error)
+	SelectCodeAccessByUserAndFile(ctx context.Context, userID, fileID string) (domain.AICodeAccess, error)
 	RemoveCodeAccess(ctx context.Context, code string) error
 }

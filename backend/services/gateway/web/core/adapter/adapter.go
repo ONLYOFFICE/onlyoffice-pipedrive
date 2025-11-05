@@ -20,13 +20,15 @@ package adapter
 
 import (
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/config"
+	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/crypto"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/port"
+	"golang.org/x/oauth2"
 )
 
-func BuildNewAICodeAccessAdapter(config *config.StorageConfig) port.AICodeAccessServiceAdapter {
+func BuildNewAICodeAccessAdapter(config *config.StorageConfig, encryptor crypto.Encryptor, credentials *oauth2.Config) port.AICodeAccessServiceAdapter {
 	adapter := NewMemoryAICodeAccessAdapter()
 	if config.Storage.URL != "" {
-		adapter = NewMongoAICodeAccessAdapter(config.Storage.URL)
+		adapter = NewMongoAICodeAccessAdapter(config.Storage.URL, encryptor, credentials)
 	}
 
 	return adapter
