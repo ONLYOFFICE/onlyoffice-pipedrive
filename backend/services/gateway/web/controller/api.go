@@ -293,7 +293,7 @@ func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationI
 		var err error
 		buyer, err = c.apiClient.GetPerson(ectx, personID, token)
 		if err != nil {
-			c.logger.Errorf("failed to get buyer: %s", err.Error())
+			c.logger.Warnf("failed to get buyer: %s", err.Error())
 		}
 
 		return nil
@@ -303,7 +303,7 @@ func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationI
 		var err error
 		organization, err = c.apiClient.GetOrganization(ectx, organizationID, token)
 		if err != nil {
-			c.logger.Errorf("failed to get organization: %s", err.Error())
+			c.logger.Warnf("failed to get organization: %s", err.Error())
 		}
 		return nil
 	})
@@ -312,7 +312,7 @@ func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationI
 		var err error
 		products, err = c.apiClient.GetDealProducts(ectx, dealID, token)
 		if err != nil {
-			c.logger.Errorf("failed to get deal products: %s", err.Error())
+			c.logger.Warnf("failed to get deal products: %s", err.Error())
 		}
 
 		return nil
