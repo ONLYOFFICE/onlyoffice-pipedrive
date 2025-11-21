@@ -281,7 +281,7 @@ func (c *ApiController) fetchMeWithDeal(ctx context.Context, token model.Token, 
 	return user, deal, nil
 }
 
-func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationID, personID string, token model.Token) (model.PersonData, map[string]any, []model.Product, error) {
+func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationID, personID string, token model.Token) (model.PersonData, map[string]any, []model.Product) {
 	var (
 		buyer        model.PersonData
 		organization map[string]any
@@ -294,8 +294,8 @@ func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationI
 		buyer, err = c.apiClient.GetPerson(ectx, personID, token)
 		if err != nil {
 			c.logger.Errorf("failed to get buyer: %s", err.Error())
-			return err
 		}
+
 		return nil
 	})
 
@@ -304,9 +304,7 @@ func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationI
 		organization, err = c.apiClient.GetOrganization(ectx, organizationID, token)
 		if err != nil {
 			c.logger.Errorf("failed to get organization: %s", err.Error())
-			return err
 		}
-
 		return nil
 	})
 
@@ -315,16 +313,14 @@ func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationI
 		products, err = c.apiClient.GetDealProducts(ectx, dealID, token)
 		if err != nil {
 			c.logger.Errorf("failed to get deal products: %s", err.Error())
-			return err
 		}
+
 		return nil
 	})
 
-	if err := eg.Wait(); err != nil {
-		return model.PersonData{}, map[string]any{}, []model.Product{}, err
-	}
+	_ = eg.Wait()
 
-	return buyer, organization, products, nil
+	return buyer, organization, products
 }
 
 func (c *ApiController) BuildGetData() http.HandlerFunc {
@@ -358,11 +354,7 @@ func (c *ApiController) BuildGetData() http.HandlerFunc {
 			return
 		}
 
-		buyer, organization, products, err := c.fetchDealData(ctx, data.DealID, fmt.Sprint(deal.OrgID), fmt.Sprint(deal.PersonID), token)
-		if err != nil {
-			c.writeErrorResponse(rw, http.StatusInternalServerError)
-			return
-		}
+		buyer, organization, products := c.fetchDealData(ctx, data.DealID, fmt.Sprint(deal.OrgID), fmt.Sprint(deal.PersonID), token)
 
 		c.writeJSONResponse(rw, response.DataResponse{
 			Data: map[string]any{
