@@ -460,11 +460,12 @@ func (c *ApiController) BuildPostSettings() http.HandlerFunc {
 		}
 
 		sreq := request.DocSettings{
-			CompanyID:   int(atomic.LoadInt64(&companyID)),
-			DocAddress:  settings.DocAddress,
-			DocHeader:   settings.DocHeader,
-			DocSecret:   settings.DocSecret,
-			DemoEnabled: settings.DemoEnabled,
+			CompanyID:       int(atomic.LoadInt64(&companyID)),
+			DocAddress:      settings.DocAddress,
+			DocHeader:       settings.DocHeader,
+			DocSecret:       settings.DocSecret,
+			DemoEnabled:     settings.DemoEnabled,
+			AutofillEnabled: settings.AutofillEnabled,
 		}
 
 		tctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

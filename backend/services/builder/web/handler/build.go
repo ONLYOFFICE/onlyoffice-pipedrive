@@ -189,6 +189,20 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 		theme = "default-dark"
 	}
 
+	plugins := response.Plugins{
+		Options: map[string]any{},
+	}
+
+	if settings.AutofillEnabled {
+		plugins.Autostart = []string{c.onlyoffice.Onlyoffice.Builder.PluginGUID}
+		plugins.Options[c.onlyoffice.Onlyoffice.Builder.PluginGUID] = map[string]any{
+			"code":     req.Code,
+			"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
+		}
+		plugins.PluginsData = []string{c.onlyoffice.Onlyoffice.Builder.AutofillerConfig}
+		plugins.Url = c.onlyoffice.Onlyoffice.Builder.AutofillerURL
+	}
+
 	config = response.BuildConfigResponse{
 		Document: response.Document{
 			Key:   req.DocKey,
@@ -214,22 +228,8 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 				HideRightMenu: false,
 				UiTheme:       theme,
 			},
-			Lang: usr.Language.Lang,
-			Plugins: response.Plugins{
-				Autostart: []string{
-					c.onlyoffice.Onlyoffice.Builder.PluginGUID,
-				},
-				Options: map[string]any{
-					c.onlyoffice.Onlyoffice.Builder.PluginGUID: map[string]any{
-						"code":     req.Code,
-						"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
-					},
-				},
-				PluginsData: []string{
-					c.onlyoffice.Onlyoffice.Builder.AutofillerConfig,
-				},
-				Url: c.onlyoffice.Onlyoffice.Builder.AutofillerURL,
-			},
+			Lang:    usr.Language.Lang,
+			Plugins: plugins,
 		},
 		Type:        t,
 		ServerURL:   settings.DocAddress,

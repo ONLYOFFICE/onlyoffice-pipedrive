@@ -69,12 +69,13 @@ func (s settingsService) CreateSettings(ctx context.Context, settings domain.Doc
 
 	s.logger.Debugf("settings %s are valid. Persisting to database", settings.CompanyID)
 	if err := s.adapter.InsertSettings(ctx, domain.DocSettings{
-		CompanyID:   settings.CompanyID,
-		DocAddress:  settings.DocAddress,
-		DocSecret:   esecret,
-		DocHeader:   settings.DocHeader,
-		DemoEnabled: settings.DemoEnabled,
-		DemoStarted: settings.DemoStarted,
+		CompanyID:       settings.CompanyID,
+		DocAddress:      settings.DocAddress,
+		DocSecret:       esecret,
+		DocHeader:       settings.DocHeader,
+		DemoEnabled:     settings.DemoEnabled,
+		DemoStarted:     settings.DemoStarted,
+		AutofillEnabled: settings.AutofillEnabled,
 	}); err != nil {
 		return err
 	}
@@ -117,12 +118,13 @@ func (s settingsService) GetSettings(ctx context.Context, cid string) (domain.Do
 	}
 
 	return domain.DocSettings{
-		CompanyID:   cid,
-		DocAddress:  settings.DocAddress,
-		DocSecret:   dsecret,
-		DocHeader:   settings.DocHeader,
-		DemoEnabled: settings.DemoEnabled,
-		DemoStarted: settings.DemoStarted,
+		CompanyID:       cid,
+		DocAddress:      settings.DocAddress,
+		DocSecret:       dsecret,
+		DocHeader:       settings.DocHeader,
+		DemoEnabled:     settings.DemoEnabled,
+		DemoStarted:     settings.DemoStarted,
+		AutofillEnabled: settings.AutofillEnabled,
 	}, nil
 }
 
@@ -154,12 +156,13 @@ func (s settingsService) UpdateSettings(ctx context.Context, settings domain.Doc
 
 	s.logger.Debugf("settings %s are valid to perform an update action", settings.CompanyID)
 	if _, err := s.adapter.UpsertSettings(ctx, domain.DocSettings{
-		CompanyID:   settings.CompanyID,
-		DocAddress:  settings.DocAddress,
-		DocSecret:   esecret,
-		DocHeader:   settings.DocHeader,
-		DemoEnabled: settings.DemoEnabled,
-		DemoStarted: settings.DemoStarted,
+		CompanyID:       settings.CompanyID,
+		DocAddress:      settings.DocAddress,
+		DocSecret:       esecret,
+		DocHeader:       settings.DocHeader,
+		DemoEnabled:     settings.DemoEnabled,
+		DemoStarted:     settings.DemoStarted,
+		AutofillEnabled: settings.AutofillEnabled,
 	}); err != nil {
 		return settings, err
 	}

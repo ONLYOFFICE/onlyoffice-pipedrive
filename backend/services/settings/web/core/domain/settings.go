@@ -27,12 +27,13 @@ import (
 )
 
 type DocSettings struct {
-	CompanyID   string    `json:"company_id" mapstructure:"company_id"`
-	DocAddress  string    `json:"doc_address" mapstructure:"doc_address"`
-	DocSecret   string    `json:"doc_secret" mapstructure:"doc_secret"`
-	DocHeader   string    `json:"doc_header" mapstructure:"doc_header"`
-	DemoEnabled bool      `json:"demo_enabled" mapstructure:"demo_enabled"`
-	DemoStarted time.Time `json:"demo_started" mapstructure:"demo_started"`
+	CompanyID       string    `json:"company_id" mapstructure:"company_id"`
+	DocAddress      string    `json:"doc_address" mapstructure:"doc_address"`
+	DocSecret       string    `json:"doc_secret" mapstructure:"doc_secret"`
+	DocHeader       string    `json:"doc_header" mapstructure:"doc_header"`
+	DemoEnabled     bool      `json:"demo_enabled" mapstructure:"demo_enabled"`
+	DemoStarted     time.Time `json:"demo_started" mapstructure:"demo_started"`
+	AutofillEnabled bool      `json:"autofill_enabled" mapstructure:"autofill_enabled"`
 }
 
 func (u DocSettings) ToJSON() []byte {

@@ -46,11 +46,12 @@ func NewSettingsInsertHandler(
 func (i SettingsInsertHandler) InsertSettings(ctx context.Context, req request.DocSettings, res *interface{}) error {
 	_, err, _ := group.Do(fmt.Sprintf("insert-%d", req.CompanyID), func() (interface{}, error) {
 		settings, err := i.service.UpdateSettings(ctx, domain.DocSettings{
-			CompanyID:   fmt.Sprint(req.CompanyID),
-			DocAddress:  req.DocAddress,
-			DocHeader:   req.DocHeader,
-			DocSecret:   req.DocSecret,
-			DemoEnabled: req.DemoEnabled,
+			CompanyID:       fmt.Sprint(req.CompanyID),
+			DocAddress:      req.DocAddress,
+			DocHeader:       req.DocHeader,
+			DocSecret:       req.DocSecret,
+			DemoEnabled:     req.DemoEnabled,
+			AutofillEnabled: req.AutofillEnabled,
 		})
 
 		if err != nil {

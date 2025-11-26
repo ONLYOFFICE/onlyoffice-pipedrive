@@ -24,11 +24,12 @@ import (
 )
 
 type DocSettingsResponse struct {
-	DocAddress  string    `json:"doc_address"`
-	DocSecret   string    `json:"doc_secret"`
-	DocHeader   string    `json:"doc_header"`
-	DemoEnabled bool      `json:"demo_enabled"`
-	DemoStarted time.Time `json:"demo_started"`
+	DocAddress      string    `json:"doc_address"`
+	DocSecret       string    `json:"doc_secret"`
+	DocHeader       string    `json:"doc_header"`
+	DemoEnabled     bool      `json:"demo_enabled"`
+	DemoStarted     time.Time `json:"demo_started"`
+	AutofillEnabled bool      `json:"autofill_enabled"`
 }
 
 func (r DocSettingsResponse) ToJSON() []byte {
