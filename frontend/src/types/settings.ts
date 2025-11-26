@@ -22,4 +22,5 @@ export type SettingsResponse = {
   doc_header: string;
   demo_enabled: boolean;
   demo_started: string;
+  autofill_enabled: boolean;
 };

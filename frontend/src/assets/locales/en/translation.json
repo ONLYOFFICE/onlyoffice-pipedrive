@@ -54,6 +54,8 @@
     "settings.inputs.error.header": "JWT Header is required",
     "settings.inputs.demo": "Enable Demo Mode",
     "settings.inputs.demo.description": "This is a public test server, please do not use it for private sensitive data. The server will be available during a 30-day period.",
+    "settings.inputs.autofill": "Enable AI Autofill Plugin",
+    "settings.inputs.autofill.description": "Automatically fill document fields with data from Pipedrive deals using AI",
     "settings.demo.status.notstarted": "Demo will start when first used",
     "settings.demo.status.active": "You are successfully connected to the demo server. It will be available until {{date}}. To disable it, uncheck the box.",
     "settings.demo.status.expired": "The 30-day test period is over. You are no longer able to connect to the demo server.",

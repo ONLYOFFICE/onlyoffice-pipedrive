@@ -65,6 +65,7 @@ export const SettingsPage: React.FC = () => {
   const [header, setHeader] = useState<string | undefined>(undefined);
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [demoStarted, setDemoStarted] = useState<string | undefined>(undefined);
+  const [autofillEnabled, setAutofillEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const isDemoValid = (): boolean => {
@@ -162,6 +163,7 @@ export const SettingsPage: React.FC = () => {
               setHeader(res.doc_header);
               setDemoEnabled(res.demo_enabled);
               setDemoStarted(res.demo_started);
+              setAutofillEnabled(res.autofill_enabled ?? true);
               setAdmin(true);
             }
           } catch {
@@ -213,6 +215,7 @@ export const SettingsPage: React.FC = () => {
           secret || "",
           header || "",
           demoEnabled,
+          autofillEnabled,
         );
         setDemoStarted(demoStarted || new Date().toISOString());
         await sdk.execute(Command.SHOW_SNACKBAR, {
@@ -409,6 +412,30 @@ export const SettingsPage: React.FC = () => {
                       "settings.inputs.demo.description",
                       "This is a public test server, please do not use it for private sensitive data. The server will be available during a 30-day period.",
                     )}
+              </p>
+            </div>
+            <div className="pl-5 pr-5 mt-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="autofill-enabled"
+                  checked={autofillEnabled}
+                  onChange={(e) => setAutofillEnabled(e.target.checked)}
+                  disabled={saving}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label
+                  htmlFor="autofill-enabled"
+                  className="ml-2 text-sm font-medium text-gray-900 dark:text-dark-text"
+                >
+                  {t("settings.inputs.autofill", "Enable AI Autofill Plugin")}
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-dark-muted mt-1 ml-6">
+                {t(
+                  "settings.inputs.autofill.description",
+                  "Automatically fill document fields with data from Pipedrive deals using AI",
+                )}
               </p>
             </div>
             <div className="flex justify-start items-center mt-4 ml-5">
