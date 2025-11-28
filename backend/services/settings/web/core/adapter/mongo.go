@@ -41,7 +41,7 @@ type docSettingsCollection struct {
 	DocHeader        string    `json:"doc_header" bson:"doc_header"`
 	DemoEnabled      bool      `json:"demo_enabled" bson:"demo_enabled"`
 	DemoStarted      time.Time `json:"demo_started" bson:"demo_started"`
-	AutofillEnabled  bool      `json:"autofill_enabled" bson:"autofill_enabled"`
+	AutofillEnabled  *bool     `json:"autofill_enabled" bson:"autofill_enabled"`
 }
 
 type mongoUserAdapter struct {

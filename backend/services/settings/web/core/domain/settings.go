@@ -33,12 +33,20 @@ type DocSettings struct {
 	DocHeader       string    `json:"doc_header" mapstructure:"doc_header"`
 	DemoEnabled     bool      `json:"demo_enabled" mapstructure:"demo_enabled"`
 	DemoStarted     time.Time `json:"demo_started" mapstructure:"demo_started"`
-	AutofillEnabled bool      `json:"autofill_enabled" mapstructure:"autofill_enabled"`
+	AutofillEnabled *bool     `json:"autofill_enabled" mapstructure:"autofill_enabled"`
 }
 
 func (u DocSettings) ToJSON() []byte {
 	buf, _ := json.Marshal(u)
 	return buf
+}
+
+func (u DocSettings) GetAutofillEnabled() bool {
+	if u.AutofillEnabled == nil {
+		return true
+	}
+
+	return *u.AutofillEnabled
 }
 
 func (u *DocSettings) Validate() error {

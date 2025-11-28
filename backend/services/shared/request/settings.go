@@ -30,7 +30,7 @@ type DocSettings struct {
 	DocSecret       string `json:"doc_secret" mapstructure:"doc_secret"`
 	DocHeader       string `json:"doc_header" mapstructure:"doc_header"`
 	DemoEnabled     bool   `json:"demo_enabled" mapstructure:"demo_enabled"`
-	AutofillEnabled bool   `json:"autofill_enabled" mapstructure:"autofill_enabled"`
+	AutofillEnabled *bool  `json:"autofill_enabled" mapstructure:"autofill_enabled"`
 }
 
 func (c DocSettings) ToJSON() []byte {

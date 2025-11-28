@@ -29,7 +29,7 @@ type DocSettingsResponse struct {
 	DocHeader       string    `json:"doc_header"`
 	DemoEnabled     bool      `json:"demo_enabled"`
 	DemoStarted     time.Time `json:"demo_started"`
-	AutofillEnabled bool      `json:"autofill_enabled"`
+	AutofillEnabled *bool     `json:"autofill_enabled"`
 }
 
 func (r DocSettingsResponse) ToJSON() []byte {
