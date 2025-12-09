@@ -22,6 +22,8 @@ import AppExtensionsSDK, {
   Modal,
 } from "@pipedrive/app-extensions-sdk";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
+import md5 from "md5";
 
 import { OnlyofficeButton } from "@components/button";
 import { OnlyofficeFile } from "@components/file";
@@ -36,13 +38,20 @@ import { useRenameFile } from "@hooks/useRenameFile";
 
 import { checkSettings } from "@services/settings";
 
-import { formatBytes, getFileIcon, isFileSupported } from "@utils/file";
+import {
+  formatBytes,
+  getFileIcon,
+  getFileParts,
+  isFileSupported,
+} from "@utils/file";
 import { getCurrentURL } from "@utils/url";
+import { useTheme } from "@context/ThemeContext";
 
 import SettingsError from "@assets/settings-error.svg";
 import { OnlyofficeFileActions } from "./Actions";
 
 export const Main: React.FC = () => {
+  const { isDark } = useTheme();
   const { t } = useTranslation();
   const { url, parameters } = getCurrentURL();
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
@@ -104,6 +113,30 @@ export const Main: React.FC = () => {
         });
         setRenamingFileId(null);
       });
+  };
+
+  const handleFileClick = async (
+    fileId: string,
+    fileName: string,
+    fileUpdateTime: string,
+  ) => {
+    if (!isFileSupported(fileName)) {
+      return;
+    }
+
+    const editorWindow = window.open("/editor");
+    const token = await sdk?.execute(Command.GET_SIGNED_TOKEN);
+    if (token) {
+      const [name, ext] = getFileParts(fileName);
+      if (editorWindow && editorWindow.location)
+        editorWindow.location.href = `/editor?token=${token.token}&deal_id=${
+          parameters.get("selectedIds") || "1"
+        }&id=${fileId}&name=${`${encodeURIComponent(
+          name.substring(0, 190),
+        )}.${ext}`}&key=${md5(fileId + fileUpdateTime)}&lng=${
+          i18next.language
+        }&dark=${isDark}`;
+    }
   };
 
   const observer = useRef<IntersectionObserver | null>(null);
@@ -188,6 +221,9 @@ export const Main: React.FC = () => {
                     Icon={getFileIcon(file.name)}
                     name={file.name}
                     supported={isFileSupported(file.name)}
+                    onClick={() =>
+                      handleFileClick(file.id, file.name, file.update_time)
+                    }
                     actions={
                       <OnlyofficeFileActions
                         file={file}
@@ -226,6 +262,9 @@ export const Main: React.FC = () => {
                   Icon={getFileIcon(file.name)}
                   name={file.name}
                   supported={isFileSupported(file.name)}
+                  onClick={() =>
+                    handleFileClick(file.id, file.name, file.update_time)
+                  }
                   actions={
                     <OnlyofficeFileActions
                       file={file}
