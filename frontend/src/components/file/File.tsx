@@ -115,13 +115,13 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
-              className="text-left font-semibold font-sans md:text-sm text-xs px-2 flex-1 h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
+              className="text-left font-semibold font-sans text-sm px-2 flex-1 h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
             />
           ) : (
             <button
               className={`${
                 supported && onClick ? "cursor-pointer" : "cursor-default"
-              } text-left font-semibold font-sans md:text-sm text-xs px-2 flex-1 h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text min-w-0`}
+              } text-left font-semibold font-sans text-sm px-2 flex-1 h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text min-w-0`}
               type="button"
               title={name}
               onClick={onClick}
