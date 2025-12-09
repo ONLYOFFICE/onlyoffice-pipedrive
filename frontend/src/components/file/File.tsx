@@ -103,8 +103,8 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
             )}
           </div>
         </div>
-        <div className="flex items-center justify-start w-3/4">
-          <div className="w-[32px] h-[32px]">
+        <div className="flex items-center justify-start flex-1 min-w-0">
+          <div className="w-[32px] h-[32px] flex-shrink-0">
             <Icon />
           </div>
           {isRenaming ? (
@@ -115,13 +115,13 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
-              className="text-left font-semibold font-sans md:text-sm text-xs px-2 w-[170px] h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
+              className="text-left font-semibold font-sans md:text-sm text-xs px-2 flex-1 h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
             />
           ) : (
             <button
               className={`${
                 supported && onClick ? "cursor-pointer" : "cursor-default"
-              } text-left font-semibold font-sans md:text-sm text-xs px-2 w-[170px] h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text`}
+              } text-left font-semibold font-sans md:text-sm text-xs px-2 flex-1 h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text min-w-0`}
               type="button"
               title={name}
               onClick={onClick}
@@ -131,7 +131,9 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
             </button>
           )}
         </div>
-        <div className="flex items-center justify-end w-1/3">{actions}</div>
+        <div className="flex items-center justify-end flex-shrink-0">
+          {actions}
+        </div>
       </div>
       <div
         className={`overflow-hidden transition-all ${
