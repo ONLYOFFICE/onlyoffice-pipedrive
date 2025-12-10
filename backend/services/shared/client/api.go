@@ -264,8 +264,17 @@ func (p PipedriveApiClient) getFile(ctx context.Context, url string) (io.ReadClo
 	return fileResp.RawBody(), nil
 }
 
-func (p *PipedriveApiClient) UploadFile(ctx context.Context, url, deal, fileID, filename string, size int64, token model.Token) error {
-	if err := p.UpdateFile(ctx, fileID, filename, token); err != nil {
+func (p *PipedriveApiClient) UploadFile(
+	ctx context.Context,
+	url,
+	deal,
+	fileID,
+	originalFilename,
+	newFilename string,
+	size int64,
+	token model.Token,
+) error {
+	if err := p.UpdateFile(ctx, fileID, originalFilename, token); err != nil {
 		return err
 	}
 
@@ -278,7 +287,7 @@ func (p *PipedriveApiClient) UploadFile(ctx context.Context, url, deal, fileID, 
 	_, err = p.client.R().
 		SetContext(ctx).
 		SetAuthToken(token.AccessToken).
-		SetFileReader("file", filename, file).
+		SetFileReader("file", newFilename, file).
 		SetFormData(map[string]string{
 			"deal_id": deal,
 		}).

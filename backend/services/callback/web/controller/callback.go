@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -76,6 +78,35 @@ func (c CallbackController) isDemoModeValid(settings response.DocSettingsRespons
 
 	staleDate := time.Now().AddDate(0, 0, -30)
 	return settings.DemoStarted.After(staleDate)
+}
+
+func initializeVersion(filename string) string {
+	lastDot := strings.LastIndex(filename, ".")
+	if lastDot == -1 {
+		return fmt.Sprintf("%s (1)", filename)
+	}
+
+	basename := filename[:lastDot]
+	ext := filename[lastDot:]
+	return fmt.Sprintf("%s (1)%s", basename, ext)
+}
+
+func (c CallbackController) createFileVersion(filename string) string {
+	r := regexp.MustCompile(`^(.+?) \((\d+)\)(\.[^.]+)$`)
+	matches := r.FindStringSubmatch(filename)
+
+	if len(matches) == 4 {
+		basename := matches[1]
+		version, err := strconv.Atoi(matches[2])
+		if err != nil {
+			return initializeVersion(filename)
+		}
+
+		ext := matches[3]
+		return fmt.Sprintf("%s (%d)%s", basename, version+1, ext)
+	}
+
+	return initializeVersion(filename)
 }
 
 func (c CallbackController) BuildPostHandleCallback() http.HandlerFunc {
@@ -205,7 +236,8 @@ func (c CallbackController) BuildPostHandleCallback() http.HandlerFunc {
 					return
 				}
 
-				if err := c.pipedriveAPI.UploadFile(ctx, body.URL, did, fid, filename, size, model.Token{
+				versionedFilename := c.createFileVersion(filename)
+				if err := c.pipedriveAPI.UploadFile(ctx, body.URL, did, fid, filename, versionedFilename, size, model.Token{
 					AccessToken:  ures.AccessToken,
 					RefreshToken: ures.RefreshToken,
 					TokenType:    ures.TokenType,
