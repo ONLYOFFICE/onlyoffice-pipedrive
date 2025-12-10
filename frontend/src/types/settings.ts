@@ -22,5 +22,6 @@ export type SettingsResponse = {
   doc_header: string;
   demo_enabled: boolean;
   demo_started: string;
+  plugins_enabled: boolean;
   autofill_enabled: boolean;
 };

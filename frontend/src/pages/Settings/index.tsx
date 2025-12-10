@@ -65,6 +65,7 @@ export const SettingsPage: React.FC = () => {
   const [header, setHeader] = useState<string | undefined>(undefined);
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [demoStarted, setDemoStarted] = useState<string | undefined>(undefined);
+  const [pluginsEnabled, setPluginsEnabled] = useState(true);
   const [autofillEnabled, setAutofillEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -163,6 +164,7 @@ export const SettingsPage: React.FC = () => {
               setHeader(res.doc_header);
               setDemoEnabled(res.demo_enabled);
               setDemoStarted(res.demo_started);
+              setPluginsEnabled(res.plugins_enabled ?? true);
               setAutofillEnabled(res.autofill_enabled ?? true);
               setAdmin(true);
             }
@@ -215,6 +217,7 @@ export const SettingsPage: React.FC = () => {
           secret || "",
           header || "",
           demoEnabled,
+          pluginsEnabled,
           autofillEnabled,
         );
         setDemoStarted(demoStarted || new Date().toISOString());
@@ -323,7 +326,15 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
           <div className="max-w-[388px]">
-            <div className="pl-5 pr-5 pb-2">
+            <div className="pl-5 pr-5 pt-3 pb-2">
+              <h2 className="text-slate-800 dark:text-dark-text font-semibold text-sm leading-5 tracking-normal">
+                {t(
+                  "settings.section.configure",
+                  "Configure ONLYOFFICE app settings",
+                )}
+              </h2>
+            </div>
+            <div className="pl-5 pr-5 pb-2" style={{ marginTop: "1.25rem" }}>
               <OnlyofficeInput
                 text={t("settings.inputs.address", "ONLYOFFICE Docs address")}
                 valid={
@@ -414,19 +425,49 @@ export const SettingsPage: React.FC = () => {
                     )}
               </p>
             </div>
-            <div className="pl-5 pr-5 mt-4">
+            <div
+              className="pl-5 pr-5 pt-3 pb-2"
+              style={{ marginTop: "1.25rem" }}
+            >
+              <h2 className="text-slate-800 dark:text-dark-text font-semibold text-sm leading-5 tracking-normal">
+                {t("settings.section.security", "Security")}
+              </h2>
+            </div>
+            <div className="pl-5 pr-5" style={{ marginTop: "1.25rem" }}>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="plugins-enabled"
+                  checked={pluginsEnabled}
+                  onChange={(e) => setPluginsEnabled(e.target.checked)}
+                  disabled={saving}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label
+                  htmlFor="plugins-enabled"
+                  className="ml-2 text-sm font-medium text-gray-900 dark:text-dark-text"
+                >
+                  {t("settings.inputs.plugins", "Enable plugins")}
+                </label>
+              </div>
+            </div>
+            <div className="pl-5 pr-5" style={{ marginTop: "1.25rem" }}>
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="autofill-enabled"
                   checked={autofillEnabled}
                   onChange={(e) => setAutofillEnabled(e.target.checked)}
-                  disabled={saving}
+                  disabled={saving || !pluginsEnabled}
                   className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <label
                   htmlFor="autofill-enabled"
-                  className="ml-2 text-sm font-medium text-gray-900 dark:text-dark-text"
+                  className={`ml-2 text-sm font-medium ${
+                    pluginsEnabled
+                      ? "text-gray-900 dark:text-dark-text"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
                 >
                   {t("settings.inputs.autofill", "Enable AI Autofill Plugin")}
                 </label>

@@ -28,6 +28,7 @@ export const postSettings = async (
   secret: string,
   header: string,
   demoEnabled = false,
+  pluginsEnabled = true,
   autofillEnabled = true,
 ) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
@@ -49,6 +50,7 @@ export const postSettings = async (
       doc_secret: secret,
       doc_header: header,
       demo_enabled: demoEnabled,
+      plugins_enabled: pluginsEnabled,
       autofill_enabled: autofillEnabled,
     },
     timeout: 4000,
