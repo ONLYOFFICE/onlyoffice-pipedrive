@@ -30,7 +30,7 @@ import { useBuildConfig } from "@hooks/useBuildConfig";
 
 import { getFileFavicon } from "@utils/file";
 
-import Icon from "@assets/nofile.svg";
+import ErrorIcon from "@assets/editor-error.svg";
 
 declare global {
   interface Window {
@@ -126,11 +126,11 @@ export const OnlyofficeEditorPage: React.FC = () => {
         <div
           className={`w-full h-full flex justify-center flex-col items-center mb-1 ${backgroundClass}`}
         >
-          <Icon />
+          <ErrorIcon />
           <OnlyofficeError
             text={t(
               "editor.error",
-              "Could not open the file. Something went wrong",
+              "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again",
             )}
             isDark={isDark}
           />

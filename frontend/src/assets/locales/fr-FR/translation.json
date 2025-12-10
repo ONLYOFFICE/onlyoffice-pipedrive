@@ -74,7 +74,7 @@
     "settings.saving.error": "Impossible de sauvegarder les paramètres ONLYOFFICE",
     "settings.links.learnmore": "En savoir plus",
     "settings.links.suggest": "Suggérer une fonctionnalité",
-    "editor.error": "Impossible d'ouvrir le fichier. Une erreur s'est produite.",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again FR",
     "editor.demo.message": "Vous utilisez le mode démo publique ONLYOFFICE Document Server. Veuillez ne pas stocker de données sensibles",
     "background.error.title": "Erreur",
     "background.error.title.main": "Une erreur s'est produite",

@@ -74,7 +74,7 @@
     "settings.saving.error": "Не удалось сохранить настройки ONLYOFFICE",
     "settings.links.learnmore": "Подробнее",
     "settings.links.suggest": "Предложить функциональную возможность",
-    "editor.error": "Не удалось открыть файл. Что-то пошло не так",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again RU",
     "editor.demo.message": "Вы используете публичную демоверсию сервера документов ONLYOFFICE. Пожалуйста, не храните конфиденциальные данные.",
     "background.error.title": "Ошибка",
     "background.error.title.main": "Что-то пошло не так",

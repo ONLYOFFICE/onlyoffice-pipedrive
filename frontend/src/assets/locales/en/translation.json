@@ -74,7 +74,7 @@
     "settings.saving.error": "Could not save ONLYOFFICE settings",
     "settings.links.learnmore": "Learn more",
     "settings.links.suggest": "Suggest a feature",
-    "editor.error": "Could not open the file. Something went wrong",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again",
     "editor.demo.message": "You are using public demo ONLYOFFICE Document Server. Please do not store private sensitive data.",
     "background.error.title": "Error",
     "background.error.title.main": "Something went wrong",

@@ -74,7 +74,7 @@
     "settings.saving.error": "No se han podido guardar los ajustes de ONLYOFFICE",
     "settings.links.learnmore": "Más información",
     "settings.links.suggest": "Sugerir una función",
-    "editor.error": "No se ha podido abrir el archivo. Se ha producido un error",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again ES",
     "editor.demo.message": "Está utilizando la versión demo pública del servidor de documentos ONLYOFFICE. No almacene datos confidenciales.",
     "background.error.title": "Error",
     "background.error.title.main": "Algo ha salido mal",

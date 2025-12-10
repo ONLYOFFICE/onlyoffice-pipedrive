@@ -74,7 +74,7 @@
     "settings.saving.error": "ONLYOFFICE-Einstellungen konnten nicht gespeichert werden",
     "settings.links.learnmore": "Mehr erfahren",
     "settings.links.suggest": "Funktion vorschlagen",
-    "editor.error": "Die Datei konnte nicht geöffnet werden. Etwas ist schief gelaufen",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again DE",
     "editor.demo.message": "Sie verwenden die öffentliche Demoversion von ONLYOFFICE Document Server. Bitte speichern Sie keine privaten sensiblen Daten.",
     "background.error.title": "Fehler",
     "background.error.title.main": "Da ist etwas schiefgelaufen",

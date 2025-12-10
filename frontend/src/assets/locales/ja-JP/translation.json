@@ -74,7 +74,7 @@
     "settings.saving.error": "ONLYOFFICEの設定を保存できませんでした",
     "settings.links.learnmore": "詳細はこちら",
     "settings.links.suggest": "機能を提案する",
-    "editor.error": "ファイルを開くことに失敗しました。エラーが発生しました",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again JP",
     "editor.demo.message": "ONLYOFFICE Document Serverの公開デモ版をご利用いただいております。個人の機密データは保存しないでください。",
     "background.error.title": "エラー",
     "background.error.title.main": "問題が発生しました",

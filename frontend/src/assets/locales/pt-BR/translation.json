@@ -74,7 +74,7 @@
     "settings.saving.error": "Não foi possível salvar as configurações do ONLYOFFICE",
     "settings.links.learnmore": "Saiba mais",
     "settings.links.suggest": "Sugira um recurso",
-    "editor.error": "Não foi possível abrir o arquivo. Algo deu errado",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again PT",
     "editor.demo.message": "Você está usando a versão de demonstração pública do ONLYOFFICE Document Server. Não armazene dados confidenciais privados.",
     "background.error.title": "Erro",
     "background.error.title.main": "Algo deu errado",

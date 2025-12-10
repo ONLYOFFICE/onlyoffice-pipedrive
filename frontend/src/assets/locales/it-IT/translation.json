@@ -74,7 +74,7 @@
     "settings.saving.error": "Impossibile salvare le impostazioni di ONLYOFFICE",
     "settings.links.learnmore": "Scopri di più",
     "settings.links.suggest": "Suggerisci una funzione",
-    "editor.error": "Impossibile aprire il file. Qualcosa è andato storto",
+    "editor.error": "Could not open the file. Please make sure that the session token is not expired/open the file from the manager again IT",
     "editor.demo.message": "Stai utilizzando la demo pubblica di ONLYOFFICE Document Server. Ti preghiamo di non memorizzare dati sensibili privati.",
     "background.error.title": "Errore",
     "background.error.title.main": "Qualcosa è andato storto",
