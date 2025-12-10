@@ -27,8 +27,8 @@ import { useDeleteFile } from "@hooks/useDeleteFile";
 
 import { downloadFile } from "@services/file";
 
-import { getFileParts, isFileSupported } from "@utils/file";
 import { getCurrentURL } from "@utils/url";
+import { getFileParts, isFileEditable, isFileSupported } from "@utils/file";
 
 import { File } from "src/types/file";
 
@@ -218,7 +218,9 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({
               }
               disabled={isEditorDisabled}
             >
-              {t("files.actions.edit", "Open")}
+              {isFileEditable(file.name)
+                ? t("files.actions.edit", "Edit")
+                : t("files.actions.view", "View")}
             </button>
 
             <button
