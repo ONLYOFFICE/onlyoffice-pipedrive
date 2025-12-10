@@ -193,12 +193,17 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 		Options: map[string]any{},
 	}
 
+	pluginsEnabled := true
+	if settings.PluginsEnabled != nil {
+		pluginsEnabled = *settings.PluginsEnabled
+	}
+
 	autofillEnabled := true
 	if settings.AutofillEnabled != nil {
 		autofillEnabled = *settings.AutofillEnabled
 	}
 
-	if autofillEnabled {
+	if pluginsEnabled && autofillEnabled {
 		plugins.Autostart = []string{c.onlyoffice.Onlyoffice.Builder.PluginGUID}
 		plugins.Options[c.onlyoffice.Onlyoffice.Builder.PluginGUID] = map[string]any{
 			"code":     req.Code,

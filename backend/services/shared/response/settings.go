@@ -29,6 +29,7 @@ type DocSettingsResponse struct {
 	DocHeader       string    `json:"doc_header"`
 	DemoEnabled     bool      `json:"demo_enabled"`
 	DemoStarted     time.Time `json:"demo_started"`
+	PluginsEnabled  *bool     `json:"plugins_enabled"`
 	AutofillEnabled *bool     `json:"autofill_enabled"`
 }
 

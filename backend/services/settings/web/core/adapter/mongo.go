@@ -41,6 +41,7 @@ type docSettingsCollection struct {
 	DocHeader        string    `json:"doc_header" bson:"doc_header"`
 	DemoEnabled      bool      `json:"demo_enabled" bson:"demo_enabled"`
 	DemoStarted      time.Time `json:"demo_started" bson:"demo_started"`
+	PluginsEnabled   *bool     `json:"plugins_enabled" bson:"plugins_enabled"`
 	AutofillEnabled  *bool     `json:"autofill_enabled" bson:"autofill_enabled"`
 }
 
@@ -71,6 +72,7 @@ func (m *mongoUserAdapter) save(ctx context.Context, settings domain.DocSettings
 				DocHeader:       settings.DocHeader,
 				DemoEnabled:     settings.DemoEnabled,
 				DemoStarted:     settings.DemoStarted,
+				PluginsEnabled:  settings.PluginsEnabled,
 				AutofillEnabled: settings.AutofillEnabled,
 			}); cerr != nil {
 				return cerr
@@ -84,6 +86,7 @@ func (m *mongoUserAdapter) save(ctx context.Context, settings domain.DocSettings
 		u.DocSecret = settings.DocSecret
 		u.DocHeader = settings.DocHeader
 		u.DemoEnabled = settings.DemoEnabled
+		u.PluginsEnabled = settings.PluginsEnabled
 		u.AutofillEnabled = settings.AutofillEnabled
 		if u.DemoStarted.IsZero() {
 			u.DemoStarted = settings.DemoStarted
@@ -128,6 +131,7 @@ func (m *mongoUserAdapter) SelectSettings(ctx context.Context, cid string) (doma
 		DocHeader:       settings.DocHeader,
 		DemoEnabled:     settings.DemoEnabled,
 		DemoStarted:     settings.DemoStarted,
+		PluginsEnabled:  settings.PluginsEnabled,
 		AutofillEnabled: settings.AutofillEnabled,
 	}, nil
 }

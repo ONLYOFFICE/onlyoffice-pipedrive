@@ -75,6 +75,7 @@ func (s settingsService) CreateSettings(ctx context.Context, settings domain.Doc
 		DocHeader:       settings.DocHeader,
 		DemoEnabled:     settings.DemoEnabled,
 		DemoStarted:     settings.DemoStarted,
+		PluginsEnabled:  settings.PluginsEnabled,
 		AutofillEnabled: settings.AutofillEnabled,
 	}); err != nil {
 		return err
@@ -124,6 +125,7 @@ func (s settingsService) GetSettings(ctx context.Context, cid string) (domain.Do
 		DocHeader:       settings.DocHeader,
 		DemoEnabled:     settings.DemoEnabled,
 		DemoStarted:     settings.DemoStarted,
+		PluginsEnabled:  settings.PluginsEnabled,
 		AutofillEnabled: settings.AutofillEnabled,
 	}, nil
 }
@@ -162,6 +164,7 @@ func (s settingsService) UpdateSettings(ctx context.Context, settings domain.Doc
 		DocHeader:       settings.DocHeader,
 		DemoEnabled:     settings.DemoEnabled,
 		DemoStarted:     settings.DemoStarted,
+		PluginsEnabled:  settings.PluginsEnabled,
 		AutofillEnabled: settings.AutofillEnabled,
 	}); err != nil {
 		return settings, err

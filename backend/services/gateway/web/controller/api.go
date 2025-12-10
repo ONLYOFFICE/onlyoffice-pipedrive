@@ -465,6 +465,7 @@ func (c *ApiController) BuildPostSettings() http.HandlerFunc {
 			DocHeader:       settings.DocHeader,
 			DocSecret:       settings.DocSecret,
 			DemoEnabled:     settings.DemoEnabled,
+			PluginsEnabled:  settings.PluginsEnabled,
 			AutofillEnabled: settings.AutofillEnabled,
 		}
 

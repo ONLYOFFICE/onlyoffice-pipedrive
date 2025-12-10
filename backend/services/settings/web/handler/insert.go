@@ -51,6 +51,7 @@ func (i SettingsInsertHandler) InsertSettings(ctx context.Context, req request.D
 			DocHeader:       req.DocHeader,
 			DocSecret:       req.DocSecret,
 			DemoEnabled:     req.DemoEnabled,
+			PluginsEnabled:  req.PluginsEnabled,
 			AutofillEnabled: req.AutofillEnabled,
 		})
 
