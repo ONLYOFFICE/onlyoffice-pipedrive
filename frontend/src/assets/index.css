@@ -38,6 +38,11 @@ code {
   scrollbar-width: none;
 }
 
+.custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 transparent;
+}
+
 .custom-scroll::-webkit-scrollbar-button {
   display: none;
 }
