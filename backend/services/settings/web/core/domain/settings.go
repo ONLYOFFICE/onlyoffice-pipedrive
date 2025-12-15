@@ -79,14 +79,11 @@ func (u *DocSettings) Validate() error {
 		}
 
 		staleDate := time.Now().AddDate(0, 0, -30)
-		if u.DemoStarted.Before(staleDate) {
-			return &InvalidModelFieldError{
-				Model:  "Docserver",
-				Field:  "Demo Started",
-				Reason: "Demo period has expired (more than 30 days old)",
-			}
+		if !u.DemoStarted.Before(staleDate) {
+			return nil
 		}
-		return nil
+
+		u.DemoEnabled = false
 	}
 
 	hasCredentials := u.DocAddress != "" || u.DocSecret != "" || u.DocHeader != ""
