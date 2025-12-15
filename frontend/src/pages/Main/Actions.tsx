@@ -185,7 +185,7 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({
       <button
         ref={buttonRef}
         type="button"
-        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
