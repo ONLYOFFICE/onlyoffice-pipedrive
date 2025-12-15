@@ -92,6 +92,35 @@ func (c ConfigHandler) isDemoModeValid(settings response.DocSettingsResponse) bo
 	return settings.DemoStarted.After(staleDate)
 }
 
+func (c ConfigHandler) getExtension(filename string) string {
+	if strings.TrimSpace(filename) == "" {
+		return ""
+	}
+	return strings.ToLower(strings.TrimPrefix(filepath.Ext(filename), "."))
+}
+
+func (c ConfigHandler) generatePluginConfig(
+	settings response.DocSettingsResponse,
+	ext, code string,
+) response.Plugins {
+	plugins := response.Plugins{Options: map[string]any{}}
+
+	pluginsEnabled := settings.PluginsEnabled == nil || *settings.PluginsEnabled
+	autofillEnabled := settings.AutofillEnabled == nil || *settings.AutofillEnabled
+
+	if pluginsEnabled && autofillEnabled && ext == "pdf" {
+		plugins.Autostart = []string{c.onlyoffice.Onlyoffice.Builder.PluginGUID}
+		plugins.Options[c.onlyoffice.Onlyoffice.Builder.PluginGUID] = map[string]any{
+			"code":     code,
+			"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
+		}
+		plugins.PluginsData = []string{c.onlyoffice.Onlyoffice.Builder.AutofillerConfig}
+		plugins.Url = c.onlyoffice.Onlyoffice.Builder.AutofillerURL
+	}
+
+	return plugins
+}
+
 func (c ConfigHandler) processConfig(user response.UserResponse, req request.BuildConfigRequest, ctx context.Context) (response.BuildConfigResponse, error) {
 	var config response.BuildConfigResponse
 
@@ -184,33 +213,11 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 	}()
 
 	filename := c.formatManager.EscapeFileName(req.Filename)
+	ext := c.getExtension(filename)
+
 	theme := "default-light"
 	if req.Dark {
 		theme = "default-dark"
-	}
-
-	plugins := response.Plugins{
-		Options: map[string]any{},
-	}
-
-	pluginsEnabled := true
-	if settings.PluginsEnabled != nil {
-		pluginsEnabled = *settings.PluginsEnabled
-	}
-
-	autofillEnabled := true
-	if settings.AutofillEnabled != nil {
-		autofillEnabled = *settings.AutofillEnabled
-	}
-
-	if pluginsEnabled && autofillEnabled {
-		plugins.Autostart = []string{c.onlyoffice.Onlyoffice.Builder.PluginGUID}
-		plugins.Options[c.onlyoffice.Onlyoffice.Builder.PluginGUID] = map[string]any{
-			"code":     req.Code,
-			"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
-		}
-		plugins.PluginsData = []string{c.onlyoffice.Onlyoffice.Builder.AutofillerConfig}
-		plugins.Url = c.onlyoffice.Onlyoffice.Builder.AutofillerURL
 	}
 
 	config = response.BuildConfigResponse{
@@ -239,7 +246,7 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 				UiTheme:       theme,
 			},
 			Lang:    usr.Language.Lang,
-			Plugins: plugins,
+			Plugins: c.generatePluginConfig(settings, ext, req.Code),
 		},
 		Type:        t,
 		ServerURL:   settings.DocAddress,
@@ -249,9 +256,8 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 	var fileType string
 	var isEditable bool
 
-	if strings.TrimSpace(filename) != "" {
-		ext := strings.ReplaceAll(filepath.Ext(filename), ".", "")
-		config.Document.FileType = strings.ToLower(ext)
+	if ext != "" {
+		config.Document.FileType = ext
 		format, exists := c.formatManager.GetFormatByName(ext)
 		if !exists {
 			return config, fmt.Errorf("format not supported: %s", ext)
