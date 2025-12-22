@@ -69,8 +69,10 @@ export const Creation: React.FC = () => {
   const [file, setFile] = useState(
     t("document.new", "New Document") || "New Document",
   );
-  const [fileType, setFileType] = useState<"docx" | "pptx" | "xlsx">("docx");
-  const handleChangeFile = (newType: "docx" | "pptx" | "xlsx") => {
+  const [fileType, setFileType] = useState<"docx" | "pptx" | "xlsx" | "pdf">(
+    "docx",
+  );
+  const handleChangeFile = (newType: "docx" | "pptx" | "xlsx" | "pdf") => {
     if (!creating) setFileType(newType);
   };
 
@@ -92,9 +94,13 @@ export const Creation: React.FC = () => {
         "New Presentation";
       const defaultXlsx =
         t("document.new.spreadsheet", "New Spreadsheet") || "New Spreadsheet";
+      const defaultPdf = t("document.new.form", "New PDF") || "New PDF";
 
       const isDefault =
-        file === defaultDocx || file === defaultPptx || file === defaultXlsx;
+        file === defaultDocx ||
+        file === defaultPptx ||
+        file === defaultXlsx ||
+        file === defaultPdf;
       if (isDefault) {
         switch (fileType) {
           case "docx":
@@ -105,6 +111,9 @@ export const Creation: React.FC = () => {
             break;
           case "xlsx":
             setFile(defaultXlsx);
+            break;
+          case "pdf":
+            setFile(defaultPdf);
             break;
           default:
             break;
@@ -218,6 +227,15 @@ export const Creation: React.FC = () => {
                 onClick={() => handleChangeFile("pptx")}
                 onKeyDown={() => handleChangeFile("pptx")}
                 selected={fileType === "pptx"}
+              />
+            </div>
+            <div className="flex-1">
+              <OnlyofficeTile
+                Icon={getFileIcon("sample.pdf")}
+                text={t("creation.tiles.form", "PDF")}
+                onClick={() => handleChangeFile("pdf")}
+                onKeyDown={() => handleChangeFile("pdf")}
+                selected={fileType === "pdf"}
               />
             </div>
           </div>
