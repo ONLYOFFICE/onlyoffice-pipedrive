@@ -94,7 +94,8 @@ export const Creation: React.FC = () => {
         "New Presentation";
       const defaultXlsx =
         t("document.new.spreadsheet", "New Spreadsheet") || "New Spreadsheet";
-      const defaultPdf = t("document.new.form", "New PDF") || "New PDF";
+      const defaultPdf =
+        t("document.new.form", "New PDF form") || "New PDF form";
 
       const isDefault =
         file === defaultDocx ||
@@ -232,7 +233,7 @@ export const Creation: React.FC = () => {
             <div className="flex-1">
               <OnlyofficeTile
                 Icon={getFileIcon("sample.pdf")}
-                text={t("creation.tiles.form", "PDF")}
+                text={t("creation.tiles.form", "PDF form")}
                 onClick={() => handleChangeFile("pdf")}
                 onKeyDown={() => handleChangeFile("pdf")}
                 selected={fileType === "pdf"}
