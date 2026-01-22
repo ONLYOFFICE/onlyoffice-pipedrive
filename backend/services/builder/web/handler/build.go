@@ -99,9 +99,84 @@ func (c ConfigHandler) getExtension(filename string) string {
 	return strings.ToLower(strings.TrimPrefix(filepath.Ext(filename), "."))
 }
 
+func isExtendedPDF(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+
+	pBuffer := string(data)
+	indexFirst := strings.Index(pBuffer, "%\xCD\xCA\xD2\xA9\x0D")
+	if indexFirst == -1 {
+		return false
+	}
+
+	pFirst := pBuffer[indexFirst+6:]
+
+	if !strings.HasPrefix(pFirst, "1 0 obj\x0A<<\x0A") {
+		return false
+	}
+
+	pFirst = pFirst[11:]
+	signature := "ONLYOFFICEFORM"
+	indexStream := strings.Index(pFirst, "stream\x0D\x0A")
+	indexMeta := strings.Index(pFirst, signature)
+
+	if indexStream == -1 || indexMeta == -1 || indexStream < indexMeta {
+		return false
+	}
+
+	pMeta := pFirst[indexMeta:]
+	pMeta = pMeta[len(signature)+3:]
+
+	indexMetaLast := strings.Index(pMeta, " ")
+	if indexMetaLast == -1 {
+		return false
+	}
+
+	pMeta = pMeta[indexMetaLast+1:]
+
+	indexMetaLast = strings.Index(pMeta, " ")
+	if indexMetaLast == -1 {
+		return false
+	}
+
+	return true
+}
+
+func (c ConfigHandler) checkForm(ctx context.Context, downloadURL string) bool {
+	if downloadURL == "" {
+		return false
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
+	if err != nil {
+		c.logger.Debugf("could not create PDF form check request: %s", err.Error())
+		return false
+	}
+
+	req.Header.Add("Range", "bytes=0-299")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+
+	defer resp.Body.Close()
+
+	buffer := make([]byte, 300)
+	n, err := resp.Body.Read(buffer)
+	if err != nil && n == 0 {
+		return false
+	}
+
+	return isExtendedPDF(buffer[:n])
+}
+
 func (c ConfigHandler) generatePluginConfig(
+	ctx context.Context,
 	settings response.DocSettingsResponse,
-	ext, code string,
+	ext, code, downloadURL string,
 ) response.Plugins {
 	plugins := response.Plugins{Options: map[string]any{}}
 
@@ -109,13 +184,16 @@ func (c ConfigHandler) generatePluginConfig(
 	autofillEnabled := settings.AutofillEnabled == nil || *settings.AutofillEnabled
 
 	if pluginsEnabled && autofillEnabled && ext == "pdf" {
-		plugins.Autostart = []string{c.onlyoffice.Onlyoffice.Builder.PluginGUID}
-		plugins.Options[c.onlyoffice.Onlyoffice.Builder.PluginGUID] = map[string]any{
-			"code":     code,
-			"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
+		isForm := c.checkForm(ctx, downloadURL)
+		if isForm {
+			plugins.Autostart = []string{c.onlyoffice.Onlyoffice.Builder.PluginGUID}
+			plugins.Options[c.onlyoffice.Onlyoffice.Builder.PluginGUID] = map[string]any{
+				"code":     code,
+				"callback": c.onlyoffice.Onlyoffice.Builder.AutofillerCallback,
+			}
+			plugins.PluginsData = []string{c.onlyoffice.Onlyoffice.Builder.AutofillerConfig}
+			plugins.Url = c.onlyoffice.Onlyoffice.Builder.AutofillerURL
 		}
-		plugins.PluginsData = []string{c.onlyoffice.Onlyoffice.Builder.AutofillerConfig}
-		plugins.Url = c.onlyoffice.Onlyoffice.Builder.AutofillerURL
 	}
 
 	return plugins
@@ -246,7 +324,7 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 				UiTheme:       theme,
 			},
 			Lang:    usr.Language.Lang,
-			Plugins: c.generatePluginConfig(settings, ext, req.Code),
+			Plugins: c.generatePluginConfig(tctx, settings, ext, req.Code, resp.Header.Get("Location")),
 		},
 		Type:        t,
 		ServerURL:   settings.DocAddress,

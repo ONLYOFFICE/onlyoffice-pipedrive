@@ -37,6 +37,7 @@ export type File = {
   url: string;
   person_name: string;
   remote_location: string;
+  is_form?: boolean;
 };
 
 type Pagination = {

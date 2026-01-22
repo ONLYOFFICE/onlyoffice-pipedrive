@@ -109,6 +109,7 @@ func (s *PipedriveHTTPService) InitializeRoutes() {
 		r.Route("/files", func(fr chi.Router) {
 			fr.Get("/download", s.fileController.BuildGetDownloadUrl())
 			fr.Get("/create", s.contextMiddleware.Protect(s.fileController.BuildGetFile()))
+			fr.Get("/check", s.contextMiddleware.Protect(s.fileController.BuildCheckForm()))
 		})
 
 		r.Route("/plugins", func(pr chi.Router) {

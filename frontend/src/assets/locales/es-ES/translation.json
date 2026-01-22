@@ -8,6 +8,8 @@
     "files.info.modified": "Fecha de modificación",
     "files.info.creation": "Fecha de creación",
     "files.info.size": "Tamaño",
+    "files.tag.form": "Form ES",
+    "files.tag.pdf": "PDF ES",
     "files.actions.menu": "Actions menu ES",
     "files.actions.edit": "Edit ES",
     "files.actions.view": "View ES",

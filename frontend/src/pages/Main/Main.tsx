@@ -43,7 +43,9 @@ import {
   getFileIcon,
   getFileParts,
   isFileSupported,
+  isPDF,
 } from "@utils/file";
+import { checkForm } from "@services/file";
 import { getCurrentURL } from "@utils/url";
 import { useTheme } from "@context/ThemeContext";
 
@@ -59,12 +61,60 @@ export const Main: React.FC = () => {
     null,
   );
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [pdfFormStatus, setPdfFormStatus] = useState<Record<string, boolean>>(
+    {},
+  );
+  const checkedFilesRef = useRef<Set<string>>(new Set());
   const renameMutator = useRenameFile();
   const { isLoading, fetchNextPage, isFetchingNextPage, files, hasNextPage } =
     useFileSearch(
       `${url}api/v1/deals/${parameters.get("selectedIds")}/files`,
       20,
     );
+
+  useEffect(() => {
+    if (!files || files.length === 0 || !sdk) return;
+
+    const checkPDFFiles = async () => {
+      const pdfFiles = files.filter(
+        (file) => isPDF(file.name) && !checkedFilesRef.current.has(file.id),
+      );
+
+      if (pdfFiles.length === 0) return;
+
+      pdfFiles.forEach((file) => checkedFilesRef.current.add(file.id));
+
+      const tokenResponse = await sdk.execute(Command.GET_SIGNED_TOKEN);
+      const results = await Promise.all(
+        pdfFiles.map(async (file) => {
+          const result = await checkForm(tokenResponse.token, file.id);
+          return { id: file.id, isForm: result.is_form };
+        }),
+      );
+
+      setPdfFormStatus((prev) => {
+        const newStatus = { ...prev };
+        results.forEach(({ id, isForm }) => {
+          newStatus[id] = isForm;
+        });
+        return newStatus;
+      });
+    };
+
+    checkPDFFiles();
+  }, [files, sdk]);
+
+  const isTagLoading = (fileId: string, fileName: string): boolean => {
+    if (!isPDF(fileName)) return false;
+    return pdfFormStatus[fileId] === undefined;
+  };
+
+  const getTag = (fileId: string, fileName: string): string | undefined => {
+    if (!isPDF(fileName)) return undefined;
+    const isForm = pdfFormStatus[fileId];
+    if (isForm === undefined) return undefined;
+    return isForm ? t("files.tag.form", "Form") : t("files.tag.pdf", "PDF");
+  };
 
   const handleRenameSubmit = async (
     fileId: string,
@@ -236,6 +286,8 @@ export const Main: React.FC = () => {
                       handleRenameSubmit(file.id, file.name, newName)
                     }
                     onRenameCancel={() => setRenamingFileId(null)}
+                    tag={getTag(file.id, file.name)}
+                    tagLoading={isTagLoading(file.id, file.name)}
                   >
                     <OnlyofficeFileInfo
                       info={{
@@ -277,6 +329,8 @@ export const Main: React.FC = () => {
                     handleRenameSubmit(file.id, file.name, newName)
                   }
                   onRenameCancel={() => setRenamingFileId(null)}
+                  tag={getTag(file.id, file.name)}
+                  tagLoading={isTagLoading(file.id, file.name)}
                 >
                   <OnlyofficeFileInfo
                     info={{

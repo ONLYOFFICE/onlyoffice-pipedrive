@@ -176,3 +176,32 @@ export const createFile = async (
 
   return res.data;
 };
+
+export interface FormCheckResponse {
+  is_form: boolean;
+  error?: string;
+}
+
+export const checkForm = async (
+  token: string,
+  fileId: string,
+): Promise<FormCheckResponse> => {
+  try {
+    const resp = await axios.get<FormCheckResponse>(
+      `${process.env.BACKEND_GATEWAY}/files/check`,
+      {
+        params: {
+          file_id: fileId,
+        },
+        headers: {
+          "X-Pipedrive-App-Context": token,
+        },
+        timeout: 15000,
+      },
+    );
+
+    return resp.data;
+  } catch {
+    return { is_form: false };
+  }
+};

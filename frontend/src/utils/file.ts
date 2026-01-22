@@ -165,3 +165,8 @@ export const getFileFavicon = (filename: string) => {
 
   return genericIcon;
 };
+
+export const isPDF = (filename: string) => {
+  const e = getFileExt(filename).toLowerCase();
+  return e === "pdf";
+};

@@ -33,6 +33,8 @@ type FileProps = {
   isRenaming?: boolean;
   onRenameSubmit?: (newName: string) => void;
   onRenameCancel?: () => void;
+  tag?: string;
+  tagLoading?: boolean;
 };
 
 export const OnlyofficeFile: React.FC<FileProps> = ({
@@ -45,6 +47,8 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
   isRenaming = false,
   onRenameSubmit,
   onRenameCancel,
+  tag,
+  tagLoading = false,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [renameValue, setRenameValue] = useState(name);
@@ -118,17 +122,29 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
               className="text-left font-semibold font-sans text-sm px-2 flex-1 h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
             />
           ) : (
-            <button
-              className={`${
-                supported && onClick ? "cursor-pointer" : "cursor-default"
-              } text-left font-semibold font-sans text-sm px-2 flex-1 h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text min-w-0`}
-              type="button"
-              title={name}
-              onClick={onClick}
-              disabled={isRenaming}
-            >
-              {name}
-            </button>
+            <div className="flex items-center flex-1 min-w-0">
+              <button
+                className={`${
+                  supported && onClick ? "cursor-pointer" : "cursor-default"
+                } text-left font-semibold font-sans text-sm px-2 h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text min-w-0 flex-1`}
+                type="button"
+                title={name}
+                onClick={onClick}
+                disabled={isRenaming}
+              >
+                {name}
+              </button>
+              {tagLoading && (
+                <span className="ml-2 mr-2 px-4 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 whitespace-nowrap flex-shrink-0 animate-pulse">
+                  &nbsp;
+                </span>
+              )}
+              {!tagLoading && tag && (
+                <span className="ml-2 mr-2 px-2 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 whitespace-nowrap flex-shrink-0">
+                  {tag}
+                </span>
+              )}
+            </div>
           )}
         </div>
         <div className="flex items-center justify-end flex-shrink-0">
