@@ -36,13 +36,13 @@ To get ONLYOFFICE Docs Cloud, get started [here](https://www.onlyoffice.com/docs
 
 ## App installation and configuration ⚙️
 
-You can add the ONLYOFFICE app from the [Pipedrive App Marketplace](https://www.pipedrive.com/en/marketplace/app/onlyoffice/ab1362af3cc9f7be). 
+You can add the ONLYOFFICE app from the [Pipedrive App Marketplace](https://www.pipedrive.com/en/marketplace/app/onlyoffice/ab1362af3cc9f7be).
 
 Once done, go to the ONLYOFFICE app settings page (**Tools and Integrations -> Marketplace apps -> ONLYOFFICE**) and enter the name of the server with ONLYOFFICE Docs installed in the *Document Server Address* field.
 
 Starting from version 7.2 of ONLYOFFICE Docs, JWT is enabled by default and the secret key is generated automatically to restrict the access to the editors and for security reasons and data integrity. You can specify your own *Document Server Secret* on the settings page. In the ONLYOFFICE Docs [config file](https://api.onlyoffice.com/docs/docs-api/additional-api/signature/), specify the same secret key to enable the validation.
 
-## App usage 
+## App usage
 
 The app allows working with office documents directly within the Pipedrive frontend.
 
