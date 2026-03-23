@@ -23,7 +23,11 @@ import { AuthToken } from "@context/TokenContext";
 
 import { FileResponse } from "src/types/file";
 
-const setupRetry = (client: AxiosInstance, retries: number, delayMultiplier: number) => {
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  delayMultiplier: number,
+) => {
   axiosRetry(client as Parameters<typeof axiosRetry>[0], {
     retries,
     retryCondition: (error) => error.status !== 200,

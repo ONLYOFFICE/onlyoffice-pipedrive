@@ -24,7 +24,11 @@ import { AuthToken } from "@context/TokenContext";
 
 import { PipedriveUserResponse, UserResponse } from "src/types/user";
 
-const setupRetry = (client: AxiosInstance, retries: number, delayMultiplier: number) => {
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  delayMultiplier: number,
+) => {
   axiosRetry(client as Parameters<typeof axiosRetry>[0], {
     retries,
     retryCondition: (error) => error.status !== 200,

@@ -21,7 +21,11 @@ import axiosRetry from "axios-retry";
 
 import { ConfigResponse } from "src/types/config";
 
-const setupRetry = (client: AxiosInstance, retries: number, delayMultiplier: number) => {
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  delayMultiplier: number,
+) => {
   axiosRetry(client as Parameters<typeof axiosRetry>[0], {
     retries,
     retryCondition: (error) => error.status !== 200,
