@@ -16,7 +16,7 @@
  *
  */
 
-import { useInfiniteQuery } from "react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { fetchFiles } from "@services/file";
 
@@ -38,8 +38,9 @@ export function useFileSearch(url: string, limit: number) {
         ? lastPage.pagination.next_start
         : undefined,
     staleTime: 3500,
-    cacheTime: 4000,
+    gcTime: 4000,
     refetchInterval: 3500,
+    initialPageParam: 0,
   });
 
   return {
