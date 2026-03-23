@@ -16,10 +16,23 @@
  *
  */
 
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import axiosRetry from "axios-retry";
 
 import { ConfigResponse } from "src/types/config";
+
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  delayMultiplier: number,
+) => {
+  axiosRetry(client as Parameters<typeof axiosRetry>[0], {
+    retries,
+    retryCondition: (error) => error.status !== 200,
+    retryDelay: (count) => count * delayMultiplier,
+    shouldResetTimeout: true,
+  });
+};
 
 export const fetchConfig = async (
   token: string,
@@ -31,12 +44,7 @@ export const fetchConfig = async (
   signal?: AbortSignal,
 ) => {
   const client = axios.create();
-  axiosRetry(client, {
-    retries: 2,
-    retryCondition: (error) => error.status !== 200,
-    retryDelay: (count) => count * 50,
-    shouldResetTimeout: true,
-  });
+  setupRetry(client, 2, 50);
 
   const res = await axios<ConfigResponse>({
     method: "GET",

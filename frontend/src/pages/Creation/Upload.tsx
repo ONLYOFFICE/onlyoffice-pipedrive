@@ -73,9 +73,9 @@ export const Upload: React.FC = () => {
             }
             onDrop={async (
               files,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
               _rejections: FileRejection[],
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
               _event: DropEvent,
             ) => {
               try {
