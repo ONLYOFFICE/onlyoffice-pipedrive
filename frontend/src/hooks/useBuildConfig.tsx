@@ -16,7 +16,7 @@
  *
  */
 
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { fetchConfig } from "@services/config";
 
@@ -33,7 +33,7 @@ export function useBuildConfig(
     queryFn: ({ signal }) =>
       fetchConfig(token, id, name, key, dealID, dark, signal),
     staleTime: 0,
-    cacheTime: 0,
+    gcTime: 0,
     refetchOnWindowFocus: false,
   });
 

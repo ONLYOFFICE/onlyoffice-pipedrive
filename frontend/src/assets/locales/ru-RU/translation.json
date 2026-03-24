@@ -9,6 +9,7 @@
     "files.info.size": "Размер",
     "snackbar.fileremoved.ok": "Файл {{file}} удален",
     "snackbar.fileremoved.error": "Не удалось удалить файл {{file}}",
+    "snackbar.filedownload.error": "Не удалось скачать файл {{file}}",
     "snackbar.uploaded.ok": "Файл {{file}} загружен",
     "snackbar.uploaded.error": "Не удалось загрузить файл {{file}}",
     "creation.title": "Создать в ONLYOFFICE",

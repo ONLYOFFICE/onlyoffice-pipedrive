@@ -52,7 +52,7 @@
     "background.error.subtitle.token": "No se ha podido recuperar la configuración del plugin. Algo ha salido mal con tu token de acceso. Por favor, reinstale la aplicación",
     "background.settings.title": "Servidor de documentos no configurado",
     "background.settings.subtitle": "Por favor, configure el Servidor de documentos en la configuración.",
-    "background.settings.button": "Ir a la configuración",
+    "background.settings.button": "Ir a la Configuración",
     "background.access.title": "Se ha denegado el acceso",
     "background.access.subtitle": "Se ha producido un error o se ha denegado el acceso",
     "background.reinstall.title": "El token de seguridad del documento ha expirado",

@@ -16,12 +16,25 @@
  *
  */
 
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import axiosRetry from "axios-retry";
 
 import { AuthToken } from "@context/TokenContext";
 
 import { FileResponse } from "src/types/file";
+
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  delayMultiplier: number,
+) => {
+  axiosRetry(client as Parameters<typeof axiosRetry>[0], {
+    retries,
+    retryCondition: (error) => error.status !== 200,
+    retryDelay: (count) => count * delayMultiplier,
+    shouldResetTimeout: true,
+  });
+};
 
 export const fetchFiles = async (
   url: string,
@@ -31,12 +44,7 @@ export const fetchFiles = async (
   sort = "add_time ASC",
 ) => {
   const client = axios.create();
-  axiosRetry(client, {
-    retries: 6,
-    retryCondition: (error) => error.status !== 200,
-    retryDelay: (count) => count * 100,
-    shouldResetTimeout: true,
-  });
+  setupRetry(client, 6, 100);
 
   try {
     const res = await client<FileResponse>({

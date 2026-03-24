@@ -23,6 +23,7 @@ import I18NextHttpBackend from "i18next-http-backend";
 import LocalStorageBackend from "i18next-localstorage-backend";
 import { initReactI18next } from "react-i18next";
 
+// eslint-disable-next-line import/no-named-as-default-member
 i18n
   .use(LanguageDetector)
   .use(ChainedBackend)
