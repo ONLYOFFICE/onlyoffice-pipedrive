@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.1.1
+## Changed
+- update of vulnerable dependencies
+
 ## 1.1.0
 ## Added
 - dark theme support for improved user experience
