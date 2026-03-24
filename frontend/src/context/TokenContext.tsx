@@ -18,7 +18,7 @@
 
 import AppExtensionsSDK from "@pipedrive/app-extensions-sdk";
 import i18next from "i18next";
-import axios, { AxiosError } from "axios";
+import { AxiosError, isAxiosError, isCancel } from "axios";
 import React, { useEffect, ReactNode } from "react";
 import { proxy } from "valtio";
 
@@ -58,13 +58,15 @@ export const TokenProvider: React.FC<ProviderProps> = ({ children }) => {
                 `${url}api/v1/users/me`,
                 token.response.access_token,
               );
+              // `changeLanguage` is available as both a named export and a method on the default instance.
+              // eslint-disable-next-line import/no-named-as-default-member
               await i18next.changeLanguage(
                 `${resp.data.language.language_code}-${resp.data.language.country_code}`,
               );
               AuthToken.access_token = token.response.access_token;
               AuthToken.expires_at = token.response.expires_at;
             } catch (err) {
-              if (axios.isAxiosError(err) && !axios.isCancel(err)) {
+              if (isAxiosError(err) && !isCancel(err)) {
                 const aerr = err as AxiosError;
                 if (aerr.response && aerr.response.status) {
                   AuthToken.status = aerr.response.status;

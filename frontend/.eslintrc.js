@@ -33,12 +33,12 @@ module.exports = {
             jsx: true,
         },
     },
-    plugins: ["@typescript-eslint", "react", "prettier"],
+    plugins: ["@typescript-eslint", "react", "react-hooks", "prettier"],
     extends: [
-        "airbnb",
-        "airbnb/hooks",
+        "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
         "plugin:react/recommended",
+        "plugin:react-hooks/recommended",
         "plugin:import/errors",
         "plugin:import/warnings",
         "plugin:import/typescript",
@@ -55,15 +55,21 @@ module.exports = {
         "import/no-cycle": [0, { ignoreExternal: true }],
         "prefer-const": "off",
         "no-use-before-define": "off",
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
         "react/function-component-definition": "off",
         "import/prefer-default-export": "off",
         "react/require-default-props": "off",
+        "react/react-in-jsx-scope": "off",
         "@typescript-eslint/no-use-before-define": [
             "error",
             { functions: false, classes: false, variables: true },
         ],
     },
     settings: {
+        react: {
+            version: "detect",
+        },
         "import/parsers": {
             "@typescript-eslint/parser": [".ts", ".tsx"],
         },

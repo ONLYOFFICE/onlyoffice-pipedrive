@@ -16,11 +16,28 @@
  *
  */
 
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import axiosRetry from "axios-retry";
 import AppExtensionsSDK, { Command } from "@pipedrive/app-extensions-sdk";
 
 import { SettingsResponse } from "src/types/settings";
+
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  options?: { retryOn429?: boolean; delayMultiplier?: number },
+) => {
+  axiosRetry(client as Parameters<typeof axiosRetry>[0], {
+    retries,
+    retryCondition: options?.retryOn429
+      ? (error) => error.status === 429
+      : (error) => error.status !== 200,
+    ...(options?.delayMultiplier && {
+      retryDelay: (count) => count * options.delayMultiplier!,
+      shouldResetTimeout: true,
+    }),
+  });
+};
 
 export const postSettings = async (
   sdk: AppExtensionsSDK,
@@ -33,10 +50,7 @@ export const postSettings = async (
 ) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
   const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
-  axiosRetry(client, {
-    retries: 2,
-    retryCondition: (error) => error.status === 429,
-  });
+  setupRetry(client, 2, { retryOn429: true });
 
   return client({
     method: "POST",
@@ -60,12 +74,7 @@ export const postSettings = async (
 export const getSettings = async (sdk: AppExtensionsSDK) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
   const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
-  axiosRetry(client, {
-    retries: 3,
-    retryCondition: (error) => error.status !== 200,
-    retryDelay: (count) => count * 50,
-    shouldResetTimeout: true,
-  });
+  setupRetry(client, 3, { delayMultiplier: 50 });
 
   const settings = await client<SettingsResponse>({
     method: "GET",
@@ -83,12 +92,7 @@ export const getSettings = async (sdk: AppExtensionsSDK) => {
 export const checkSettings = async (sdk: AppExtensionsSDK) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
   const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
-  axiosRetry(client, {
-    retries: 2,
-    retryCondition: (error) => error.status !== 200,
-    retryDelay: (count) => count * 50,
-    shouldResetTimeout: true,
-  });
+  setupRetry(client, 2, { delayMultiplier: 50 });
 
   try {
     const response = await client<{ configured: boolean }>({

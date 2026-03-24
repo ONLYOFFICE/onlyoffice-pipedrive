@@ -39,15 +39,17 @@ type PipedriveAuthClient struct {
 }
 
 func NewPipedriveAuthClient(credentials *oauth2.Config) PipedriveAuthClient {
-	otelClient := otelhttp.DefaultClient
-	otelClient.Transport = otelhttp.NewTransport(&http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   30 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	})
+	otelClient := &http.Client{
+		Transport: otelhttp.NewTransport(&http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}),
+	}
+
 	return PipedriveAuthClient{
 		client: resty.NewWithClient(otelClient).
 			SetBaseURL("https://oauth.pipedrive.com").

@@ -16,7 +16,7 @@
  *
  */
 
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import axiosRetry from "axios-retry";
 import AppExtensionsSDK, { Command } from "@pipedrive/app-extensions-sdk";
 
@@ -24,15 +24,23 @@ import { AuthToken } from "@context/TokenContext";
 
 import { PipedriveUserResponse, UserResponse } from "src/types/user";
 
+const setupRetry = (
+  client: AxiosInstance,
+  retries: number,
+  delayMultiplier: number,
+) => {
+  axiosRetry(client as Parameters<typeof axiosRetry>[0], {
+    retries,
+    retryCondition: (error) => error.status !== 200,
+    retryDelay: (count) => count * delayMultiplier,
+    shouldResetTimeout: true,
+  });
+};
+
 export const getMe = async (sdk: AppExtensionsSDK) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
   const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
-  axiosRetry(client, {
-    retries: 3,
-    retryCondition: (error) => error.status !== 200,
-    retryDelay: (count) => count * 50,
-    shouldResetTimeout: true,
-  });
+  setupRetry(client, 3, 50);
 
   const res = await client<UserResponse>({
     method: "GET",
@@ -49,12 +57,7 @@ export const getMe = async (sdk: AppExtensionsSDK) => {
 
 export const getPipedriveMe = async (url: string, accessToken?: string) => {
   const client = axios.create();
-  axiosRetry(client, {
-    retries: 3,
-    retryCondition: (error) => error.status !== 200,
-    retryDelay: (count) => count * 50,
-    shouldResetTimeout: true,
-  });
+  setupRetry(client, 3, 50);
 
   const res = await client<PipedriveUserResponse>({
     method: "GET",

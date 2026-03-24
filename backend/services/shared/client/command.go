@@ -42,15 +42,17 @@ type CommandClient struct {
 }
 
 func NewCommandClient(jwtManager crypto.JwtManager) CommandClient {
-	otelClient := otelhttp.DefaultClient
-	otelClient.Transport = otelhttp.NewTransport(&http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   30 * time.Second,
-		ResponseHeaderTimeout: 6 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	})
+	otelClient := &http.Client{
+		Transport: otelhttp.NewTransport(&http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 6 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}),
+	}
+
 	return CommandClient{
 		client: resty.NewWithClient(otelClient).
 			SetRetryCount(0).

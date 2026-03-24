@@ -23,6 +23,9 @@ const js = require("@eslint/js");
 const typescriptEslint = require("@typescript-eslint/eslint-plugin");
 const typescriptParser = require("@typescript-eslint/parser");
 const react = require("eslint-plugin-react");
+const reactHooks = require("eslint-plugin-react-hooks");
+const jsxA11y = require("eslint-plugin-jsx-a11y");
+const importPlugin = require("eslint-plugin-import");
 const prettier = require("eslint-plugin-prettier");
 
 const compat = new FlatCompat({
@@ -31,7 +34,6 @@ const compat = new FlatCompat({
 });
 
 module.exports = [
-    // Ignored files (from .eslintignore)
     {
         ignores: [
             "**/assets/**",
@@ -40,12 +42,12 @@ module.exports = [
             "**/__snapshots__/**",
             "**/__mocks__/**",
             "**/setupTests.ts",
+            "**/dist/**",
+            "**/build/**",
         ],
     },
-    // Use FlatCompat to apply old-style extends configs
+    js.configs.recommended,
     ...compat.extends(
-        "airbnb",
-        "airbnb/hooks",
         "plugin:@typescript-eslint/recommended",
         "plugin:react/recommended",
         "plugin:import/errors",
@@ -53,7 +55,6 @@ module.exports = [
         "plugin:import/typescript",
         "prettier"
     ),
-    // Apply custom config to TypeScript files (must come after extends to override)
     {
         files: ["**/*.ts", "**/*.tsx"],
         languageOptions: {
@@ -70,14 +71,32 @@ module.exports = [
                 browser: true,
                 node: true,
                 es2020: true,
+                document: true,
+                window: true,
+                process: true,
+                console: true,
+                setTimeout: true,
+                clearTimeout: true,
+                setInterval: true,
+                clearInterval: true,
+                fetch: true,
+                FormData: true,
+                File: true,
+                AbortSignal: true,
             },
         },
         plugins: {
             "@typescript-eslint": typescriptEslint,
             react: react,
+            "react-hooks": reactHooks,
+            "jsx-a11y": jsxA11y,
+            import: importPlugin,
             prettier: prettier,
         },
         settings: {
+            react: {
+                version: "detect",
+            },
             "import/parsers": {
                 "@typescript-eslint/parser": [".ts", ".tsx"],
             },
@@ -106,14 +125,18 @@ module.exports = [
             "import/no-cycle": [0, { ignoreExternal: true }],
             "prefer-const": "off",
             "no-use-before-define": "off",
+            "no-unused-vars": "off",
+            "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
             "react/function-component-definition": "off",
             "import/prefer-default-export": "off",
             "react/require-default-props": "off",
+            "react/react-in-jsx-scope": "off",
             "@typescript-eslint/no-use-before-define": [
                 "error",
                 { functions: false, classes: false, variables: true },
             ],
+            "react-hooks/rules-of-hooks": "error",
+            "react-hooks/exhaustive-deps": "warn",
         },
     },
 ];
-
