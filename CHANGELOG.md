@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.1.2
+## Changed
+- fixed demo flag issue
+
 ## 1.1.1
 ## Changed
 - update of vulnerable dependencies

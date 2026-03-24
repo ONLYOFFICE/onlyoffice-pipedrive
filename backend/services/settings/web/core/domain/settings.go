@@ -1,6 +1,6 @@
 /**
  *
- * (c) Copyright Ascensio System SIA 2025
+ * (c) Copyright Ascensio System SIA 2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,30 @@ func (u *DocSettings) Validate() error {
 		}
 	}
 
+	hasCredentials := u.DocAddress != "" && u.DocSecret != "" && u.DocHeader != ""
+	if hasCredentials {
+		url, err := url.Parse(u.DocAddress)
+		if err != nil {
+			return &InvalidModelFieldError{
+				Model:  "Docserver",
+				Field:  "Document Address",
+				Reason: err.Error(),
+			}
+		}
+
+		u.DocAddress = fmt.Sprintf("%s://%s/%s", url.Scheme, url.Host, url.Path)
+		for {
+			if strings.LastIndex(u.DocAddress, "/") == len(u.DocAddress)-1 {
+				u.DocAddress = u.DocAddress[:len(u.DocAddress)-1]
+			} else {
+				break
+			}
+		}
+
+		u.DocAddress += "/"
+		return nil
+	}
+
 	if u.DemoEnabled {
 		if u.DemoStarted.IsZero() {
 			u.DemoStarted = time.Now()
@@ -71,9 +95,8 @@ func (u *DocSettings) Validate() error {
 		return nil
 	}
 
-	hasCredentials := u.DocAddress != "" || u.DocSecret != "" || u.DocHeader != ""
-
-	if hasCredentials {
+	partialCredentials := u.DocAddress != "" || u.DocSecret != "" || u.DocHeader != ""
+	if partialCredentials {
 		if u.DocAddress == "" {
 			return &InvalidModelFieldError{
 				Model:  "Docserver",
@@ -97,26 +120,6 @@ func (u *DocSettings) Validate() error {
 				Reason: "Required when other credentials are provided",
 			}
 		}
-
-		url, err := url.Parse(u.DocAddress)
-		if err != nil {
-			return &InvalidModelFieldError{
-				Model:  "Docserver",
-				Field:  "Document Address",
-				Reason: err.Error(),
-			}
-		}
-
-		u.DocAddress = fmt.Sprintf("%s://%s/%s", url.Scheme, url.Host, url.Path)
-		for {
-			if strings.LastIndex(u.DocAddress, "/") == len(u.DocAddress)-1 {
-				u.DocAddress = u.DocAddress[:len(u.DocAddress)-1]
-			} else {
-				break
-			}
-		}
-
-		u.DocAddress += "/"
 	}
 
 	return nil
