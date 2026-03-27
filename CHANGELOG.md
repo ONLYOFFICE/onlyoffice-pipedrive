@@ -1,5 +1,9 @@
 # Change Log
 
+##
+## Added
+- using AI Auto Fill Plugin
+
 ## 1.1.2
 ## Changed
 - fixed demo flag issue
