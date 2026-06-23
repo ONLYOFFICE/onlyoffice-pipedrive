@@ -117,6 +117,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
+          no-cache: true
           platforms: linux/amd64
           tags: ${{ env.DOCKER_HUB_NAMESPACE }}/pipedrive-${{ matrix.service }}:${{ github.event.inputs.tag || env.RC_TAG }}
 
