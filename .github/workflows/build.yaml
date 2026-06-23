@@ -46,6 +46,10 @@ jobs:
         with:
           submodules: recursive
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.16.0
+
       - name: Mask custom value
         if: github.event.inputs.create_modal_id != ''
         id: mask-value
