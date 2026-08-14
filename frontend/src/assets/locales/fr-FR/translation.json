@@ -18,7 +18,7 @@
     "files.actions.delete": "Supprimer",
     "snackbar.fileremoved.ok": "Le fichier {{file}} a été supprimé",
     "snackbar.fileremoved.error": "Impossible de supprimer le fichier {{file}}",
-    "snackbar.filerenamed.ok": "Fichier renommé avec succès",
+    "snackbar.filerenamed.ok": "Le fichier a été renommé avec succès",
     "snackbar.filerenamed.error": "Impossible de renommer le fichier {{file}}",
     "snackbar.filedownload.error": "Impossible de télécharger le fichier {{file}}",
     "rename.prompt": "Saisissez le nouveau nom du fichier",
