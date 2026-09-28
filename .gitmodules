@@ -11,4 +11,3 @@
 [submodule "backend/services/gateway/assets/aiautofill"]
 	path = backend/services/gateway/assets/aiautofill
 	url = https://github.com/ONLYOFFICE/plugin-aiautofill.git
-	branch = develop
