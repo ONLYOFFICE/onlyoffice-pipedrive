@@ -16,4 +16,4 @@
  *
  */
 
-export { OnlyofficeTile } from "./Tile";
+export { OnlyofficeTile, type TileProps } from "./Tile";

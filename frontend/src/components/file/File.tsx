@@ -30,6 +30,11 @@ type FileProps = {
   actions?: React.ReactNode;
   children?: React.ReactNode;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  isRenaming?: boolean;
+  onRenameSubmit?: (newName: string) => void;
+  onRenameCancel?: () => void;
+  tag?: string;
+  tagLoading?: boolean;
 };
 
 export const OnlyofficeFile: React.FC<FileProps> = ({
@@ -39,9 +44,49 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
   actions,
   children,
   onClick,
+  isRenaming = false,
+  onRenameSubmit,
+  onRenameCancel,
+  tag,
+  tagLoading = false,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [renameValue, setRenameValue] = useState(name);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const { isDark } = useTheme();
+
+  React.useEffect(() => {
+    if (isRenaming && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  React.useEffect(() => {
+    setRenameValue(name);
+  }, [name]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onRenameSubmit?.(renameValue.trim());
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onRenameCancel?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isRenaming) {
+      const trimmedValue = renameValue.trim();
+      if (trimmedValue !== "" && trimmedValue !== name) {
+        onRenameSubmit?.(trimmedValue);
+      } else {
+        onRenameCancel?.();
+      }
+    }
+  };
+
   return (
     <>
       <div className="flex items-center w-full border-b dark:border-dark-border py-2 my-1">
@@ -62,22 +107,49 @@ export const OnlyofficeFile: React.FC<FileProps> = ({
             )}
           </div>
         </div>
-        <div className="flex items-center justify-start w-3/4">
-          <div className="w-[32px] h-[32px]">
+        <div className="flex items-center justify-start flex-1 min-w-0">
+          <div className="w-[32px] h-[32px] flex-shrink-0">
             <Icon />
           </div>
-          <button
-            className={`${
-              supported && onClick ? "cursor-pointer" : "cursor-default"
-            } text-left font-semibold font-sans md:text-sm text-xs px-2 w-[170px] h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text`}
-            type="button"
-            title={name}
-            onClick={onClick}
-          >
-            {name}
-          </button>
+          {isRenaming ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              className="text-left font-semibold font-sans text-sm px-2 flex-1 h-[32px] text-black dark:text-dark-text bg-white dark:bg-dark-bg border border-blue-500 dark:border-blue-400 rounded outline-none"
+            />
+          ) : (
+            <div className="flex items-center flex-1 min-w-0">
+              <button
+                className={`${
+                  supported && onClick ? "cursor-pointer" : "cursor-default"
+                } text-left font-semibold font-sans text-sm px-2 h-[32px] overflow-hidden text-ellipsis whitespace-nowrap text-black dark:text-dark-text min-w-0 flex-1`}
+                type="button"
+                title={name}
+                onClick={onClick}
+                disabled={isRenaming}
+              >
+                {name}
+              </button>
+              {tagLoading && (
+                <span className="ml-2 mr-2 px-4 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 whitespace-nowrap flex-shrink-0 animate-pulse">
+                  &nbsp;
+                </span>
+              )}
+              {!tagLoading && tag && (
+                <span className="ml-2 mr-2 px-2 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 whitespace-nowrap flex-shrink-0">
+                  {tag}
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex items-center justify-end w-1/3">{actions}</div>
+        <div className="flex items-center justify-end flex-shrink-0">
+          {actions}
+        </div>
       </div>
       <div
         className={`overflow-hidden transition-all ${

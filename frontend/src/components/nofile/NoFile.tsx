@@ -22,13 +22,22 @@ import Nofiles from "@assets/nofile.svg";
 
 type NoFileProps = {
   title: string;
+  subtitle?: string;
 };
 
-export const OnlyofficeNoFile: React.FC<NoFileProps> = ({ title }) => (
+export const OnlyofficeNoFile: React.FC<NoFileProps> = ({
+  title,
+  subtitle,
+}) => (
   <div className="h-full w-full flex flex-col justify-center items-center">
     <Nofiles />
-    <span className="font-sans font-bold text-sm max-w-max break-words text-center text-black dark:text-dark-text">
+    <span className="font-sans font-bold text-lg max-w-max break-words text-center text-black dark:text-dark-text mb-2">
       {title}
     </span>
+    {subtitle && (
+      <span className="font-sans font-normal text-xs leading-4 tracking-normal text-[#555F65] max-w-max break-words text-center">
+        {subtitle}
+      </span>
+    )}
   </div>
 );

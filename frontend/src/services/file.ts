@@ -113,7 +113,12 @@ export const deleteFile = async (
   return res.status === 200;
 };
 
-export const uploadFile = async (url: string, deal: string, file: File) => {
+export const uploadFile = async (
+  url: string,
+  deal: string,
+  file: File,
+  signal?: AbortSignal,
+) => {
   const form = new FormData();
   form.append("file", file);
   form.append("deal_id", deal);
@@ -127,7 +132,84 @@ export const uploadFile = async (url: string, deal: string, file: File) => {
       Authorization: `Bearer ${AuthToken.access_token}`,
     },
     data: form,
+    signal,
   });
 
   return res.data;
+};
+
+export const renameFile = async (
+  url: string,
+  name: string,
+  signal: AbortSignal | undefined = undefined,
+) => {
+  const params = new URLSearchParams();
+  params.append("name", name);
+
+  const res = await axios({
+    method: "PUT",
+    url,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Bearer ${AuthToken.access_token}`,
+    },
+    data: params,
+    signal,
+    timeout: 4500,
+  });
+
+  return res.status === 200;
+};
+
+export const createFile = async (
+  token: string,
+  lang: string,
+  fileType: string,
+  dealId: string,
+  filename: string,
+) => {
+  const res = await axios({
+    method: "GET",
+    url: `${process.env.BACKEND_GATEWAY}/files/create`,
+    headers: {
+      "X-Pipedrive-App-Context": token,
+    },
+    params: {
+      lang,
+      type: fileType,
+      deal: dealId,
+      filename,
+    },
+  });
+
+  return res.data;
+};
+
+export interface FormCheckResponse {
+  is_form: boolean;
+  error?: string;
+}
+
+export const checkForm = async (
+  token: string,
+  fileId: string,
+): Promise<FormCheckResponse> => {
+  try {
+    const resp = await axios.get<FormCheckResponse>(
+      `${process.env.BACKEND_GATEWAY}/files/check`,
+      {
+        params: {
+          file_id: fileId,
+        },
+        headers: {
+          "X-Pipedrive-App-Context": token,
+        },
+        timeout: 15000,
+      },
+    );
+
+    return resp.data;
+  } catch {
+    return { is_form: false };
+  }
 };

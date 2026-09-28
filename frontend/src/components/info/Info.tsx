@@ -30,7 +30,7 @@ export const OnlyofficeFileInfo: React.FC<FileInfoProps> = ({ info }) => (
   <div className="mx-1">
     {Object.keys(info).map((subtitle) => (
       <div key={subtitle + info[subtitle]} className="flex text-left mb-2">
-        <div className="flex justify-start mr-10 my-1 min-w-0">
+        <div className="flex justify-start w-32 flex-shrink-0 my-1">
           <OnlyofficeSubtitle text={subtitle} />
         </div>
         <div className="flex justify-start min-w-0">

@@ -37,15 +37,18 @@ export const OnlyofficeButton: React.FC<ButtonProps> = ({
   onClick,
 }) => {
   const classes = cx({
-    "hover:shadow-lg duration-200 transition-all": !disabled,
+    "duration-200 transition-all": true,
     "bg-green-700 dark:bg-dark-primary text-white": primary,
-    "bg-white dark:bg-dark-bg text-black dark:text-dark-text border-2 border-slate-300 dark:border-dark-border border-solid":
+    "hover:bg-green-800 dark:hover:bg-dark-primary-hover": primary && !disabled,
+    "bg-white dark:bg-dark-bg text-black dark:text-dark-text border border-[#C8CCD2] dark:border-dark-border":
       !primary,
+    "hover:bg-[#F6F7F8] dark:hover:bg-dark-hover": !primary && !disabled,
+    "active:bg-[#E4E6E9] dark:active:bg-dark-selected": !primary && !disabled,
+    "shadow-[0px_1px_2px_0px_rgba(42,54,71,0.05)]": !primary && !disabled,
     "min-w-[62px] h-[32px]": true,
     "w-full": fullWidth,
     "cursor-pointer": !disabled,
-    "bg-opacity-50 cursor-not-allowed": disabled,
-    "dark:opacity-40 dark:brightness-75": disabled,
+    "cursor-not-allowed opacity-50 dark:opacity-40": disabled,
   });
 
   return (

@@ -39,7 +39,7 @@ export const CreatePage: React.FC = () => {
   useEffect(() => {
     new AppExtensionsSDK().initialize({
       size: {
-        height: 500,
+        height: 424,
         width: 622,
       },
     });

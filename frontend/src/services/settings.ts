@@ -45,6 +45,8 @@ export const postSettings = async (
   secret: string,
   header: string,
   demoEnabled = false,
+  pluginsEnabled = true,
+  autofillEnabled = true,
 ) => {
   const pctx = await sdk.execute(Command.GET_SIGNED_TOKEN);
   const client = axios.create({ baseURL: process.env.BACKEND_GATEWAY });
@@ -62,6 +64,8 @@ export const postSettings = async (
       doc_secret: secret,
       doc_header: header,
       demo_enabled: demoEnabled,
+      plugins_enabled: pluginsEnabled,
+      autofill_enabled: autofillEnabled,
     },
     timeout: 4000,
   });

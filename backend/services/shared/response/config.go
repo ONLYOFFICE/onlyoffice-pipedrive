@@ -1,6 +1,6 @@
 /**
  *
- * (c) Copyright Ascensio System SIA 2025
+ * (c) Copyright Ascensio System SIA 2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,14 @@ type EditorConfig struct {
 	CallbackURL   string        `json:"callbackUrl"`
 	Customization Customization `json:"customization"`
 	Lang          string        `json:"lang,omitempty"`
+	Plugins       Plugins       `json:"plugins"`
+}
+
+type Plugins struct {
+	Autostart   []string       `json:"autostart,omitempty"`
+	Options     map[string]any `json:"options"`
+	PluginsData []string       `json:"pluginsData,omitempty"`
+	Url         string         `json:"url,omitempty"`
 }
 
 type User struct {

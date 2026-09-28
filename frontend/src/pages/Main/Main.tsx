@@ -22,6 +22,8 @@ import AppExtensionsSDK, {
   Modal,
 } from "@pipedrive/app-extensions-sdk";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
+import md5 from "md5";
 
 import { OnlyofficeButton } from "@components/button";
 import { OnlyofficeFile } from "@components/file";
@@ -32,27 +34,160 @@ import { OnlyofficeSpinner } from "@components/spinner";
 import { OnlyofficeBackgroundError } from "@layouts/ErrorBackground";
 
 import { useFileSearch } from "@hooks/useFileSearch";
+import { useRenameFile } from "@hooks/useRenameFile";
 
 import { checkSettings } from "@services/settings";
 
-import { formatBytes, getFileIcon, isFileSupported } from "@utils/file";
+import {
+  formatBytes,
+  getFileIcon,
+  getFileParts,
+  isFileSupported,
+  isPDF,
+} from "@utils/file";
+import { checkForm } from "@services/file";
 import { getCurrentURL } from "@utils/url";
+import { useTheme } from "@context/ThemeContext";
 
 import SettingsError from "@assets/settings-error.svg";
 import { OnlyofficeFileActions } from "./Actions";
 
 export const Main: React.FC = () => {
+  const { isDark } = useTheme();
   const { t } = useTranslation();
   const { url, parameters } = getCurrentURL();
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
   const [settingsConfigured, setSettingsConfigured] = useState<boolean | null>(
     null,
   );
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [pdfFormStatus, setPdfFormStatus] = useState<Record<string, boolean>>(
+    {},
+  );
+  const checkedFilesRef = useRef<Set<string>>(new Set());
+  const renameMutator = useRenameFile();
   const { isLoading, fetchNextPage, isFetchingNextPage, files, hasNextPage } =
     useFileSearch(
       `${url}api/v1/deals/${parameters.get("selectedIds")}/files`,
       20,
     );
+
+  useEffect(() => {
+    if (!files || files.length === 0 || !sdk) return;
+
+    const checkPDFFiles = async () => {
+      const pdfFiles = files.filter(
+        (file) => isPDF(file.name) && !checkedFilesRef.current.has(file.id),
+      );
+
+      if (pdfFiles.length === 0) return;
+
+      pdfFiles.forEach((file) => checkedFilesRef.current.add(file.id));
+
+      const tokenResponse = await sdk.execute(Command.GET_SIGNED_TOKEN);
+      const results = await Promise.all(
+        pdfFiles.map(async (file) => {
+          const result = await checkForm(tokenResponse.token, file.id);
+          return { id: file.id, isForm: result.is_form };
+        }),
+      );
+
+      setPdfFormStatus((prev) => {
+        const newStatus = { ...prev };
+        results.forEach(({ id, isForm }) => {
+          newStatus[id] = isForm;
+        });
+        return newStatus;
+      });
+    };
+
+    checkPDFFiles();
+  }, [files, sdk]);
+
+  const isTagLoading = (fileId: string, fileName: string): boolean => {
+    if (!isPDF(fileName)) return false;
+    return pdfFormStatus[fileId] === undefined;
+  };
+
+  const getTag = (fileId: string, fileName: string): string | undefined => {
+    if (!isPDF(fileName)) return undefined;
+    const isForm = pdfFormStatus[fileId];
+    if (isForm === undefined) return undefined;
+    return isForm ? t("files.tag.form", "Form") : t("files.tag.pdf", "PDF");
+  };
+
+  const handleRenameSubmit = async (
+    fileId: string,
+    fileName: string,
+    newName: string,
+  ) => {
+    if (newName === "") {
+      await sdk?.execute(Command.SHOW_SNACKBAR, {
+        message: t("rename.error.empty", "File name cannot be empty"),
+      });
+      setRenamingFileId(null);
+      return;
+    }
+
+    if (newName.length > 255) {
+      await sdk?.execute(Command.SHOW_SNACKBAR, {
+        message: t(
+          "rename.error.toolong",
+          "File name is too long (max 255 characters)",
+        ),
+      });
+      setRenamingFileId(null);
+      return;
+    }
+
+    if (newName === fileName) {
+      setRenamingFileId(null);
+      return;
+    }
+
+    renameMutator
+      .mutateAsync({ url: `${url}api/v1/files/${fileId}`, name: newName })
+      .then(async () => {
+        await sdk?.execute(Command.SHOW_SNACKBAR, {
+          message: t("snackbar.filerenamed.ok", "File renamed successfully"),
+        });
+        setRenamingFileId(null);
+      })
+      .catch(async () => {
+        await sdk?.execute(Command.SHOW_SNACKBAR, {
+          message: t(
+            "snackbar.filerenamed.error",
+            `Could not rename file ${fileName}`,
+            { file: fileName },
+          ),
+        });
+        setRenamingFileId(null);
+      });
+  };
+
+  const handleFileClick = async (
+    fileId: string,
+    fileName: string,
+    fileUpdateTime: string,
+  ) => {
+    if (!isFileSupported(fileName)) {
+      return;
+    }
+
+    const editorWindow = window.open("/editor");
+    const token = await sdk?.execute(Command.GET_SIGNED_TOKEN);
+    if (token) {
+      const [name, ext] = getFileParts(fileName);
+      if (editorWindow && editorWindow.location)
+        editorWindow.location.href = `/editor?token=${token.token}&deal_id=${
+          parameters.get("selectedIds") || "1"
+        }&id=${fileId}&name=${`${encodeURIComponent(
+          name.substring(0, 190),
+        )}.${ext}`}&key=${md5(fileId + fileUpdateTime)}&lng=${
+          i18next.language
+        }&dark=${isDark}`;
+    }
+  };
 
   const observer = useRef<IntersectionObserver | null>(null);
   const lastItem = useCallback(
@@ -118,7 +253,11 @@ export const Main: React.FC = () => {
         )}
         {!isLoading && (!files || files.length === 0) && (
           <OnlyofficeNoFile
-            title={t("files.error.nofiles", "Could not find Pipedrive files")}
+            title={t("files.error.nofiles", "No docs here yet")}
+            subtitle={t(
+              "files.error.nofiles.subtitle",
+              "Any files you create or upload will show up here.",
+            )}
           />
         )}
         {!isLoading &&
@@ -132,7 +271,23 @@ export const Main: React.FC = () => {
                     Icon={getFileIcon(file.name)}
                     name={file.name}
                     supported={isFileSupported(file.name)}
-                    actions={<OnlyofficeFileActions file={file} />}
+                    onClick={() =>
+                      handleFileClick(file.id, file.name, file.update_time)
+                    }
+                    actions={
+                      <OnlyofficeFileActions
+                        file={file}
+                        onRenameClick={() => setRenamingFileId(file.id)}
+                        isRenaming={renamingFileId === file.id}
+                      />
+                    }
+                    isRenaming={renamingFileId === file.id}
+                    onRenameSubmit={(newName) =>
+                      handleRenameSubmit(file.id, file.name, newName)
+                    }
+                    onRenameCancel={() => setRenamingFileId(null)}
+                    tag={getTag(file.id, file.name)}
+                    tagLoading={isTagLoading(file.id, file.name)}
                   >
                     <OnlyofficeFileInfo
                       info={{
@@ -159,7 +314,23 @@ export const Main: React.FC = () => {
                   Icon={getFileIcon(file.name)}
                   name={file.name}
                   supported={isFileSupported(file.name)}
-                  actions={<OnlyofficeFileActions file={file} />}
+                  onClick={() =>
+                    handleFileClick(file.id, file.name, file.update_time)
+                  }
+                  actions={
+                    <OnlyofficeFileActions
+                      file={file}
+                      onRenameClick={() => setRenamingFileId(file.id)}
+                      isRenaming={renamingFileId === file.id}
+                    />
+                  }
+                  isRenaming={renamingFileId === file.id}
+                  onRenameSubmit={(newName) =>
+                    handleRenameSubmit(file.id, file.name, newName)
+                  }
+                  onRenameCancel={() => setRenamingFileId(null)}
+                  tag={getTag(file.id, file.name)}
+                  tagLoading={isTagLoading(file.id, file.name)}
                 >
                   <OnlyofficeFileInfo
                     info={{
@@ -190,7 +361,7 @@ export const Main: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="h-[15%] w-3/4 text-ellipsis flex justify-start items-center px-5">
+      <div className="h-[15%] w-full text-ellipsis flex justify-center items-center px-5">
         <OnlyofficeButton
           text={t("button.upload", "Create or upload document")}
           primary

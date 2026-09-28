@@ -26,6 +26,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Make aiautofill
+        working-directory: ./backend/services/gateway/assets/aiautofill
+        run: |
+          make install-tools
+          make
       - name: Install Dependencies
         run: |
           yarn install

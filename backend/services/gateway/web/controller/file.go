@@ -214,3 +214,143 @@ func (c FileController) BuildGetDownloadUrl() http.HandlerFunc {
 		rw.Write([]byte(resp.Header.Get("Location")))
 	}
 }
+
+func isExtendedPDF(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+
+	pBuffer := string(data)
+	indexFirst := strings.Index(pBuffer, "%\xCD\xCA\xD2\xA9\x0D")
+	if indexFirst == -1 {
+		return false
+	}
+
+	pFirst := pBuffer[indexFirst+6:]
+
+	if !strings.HasPrefix(pFirst, "1 0 obj\x0A<<\x0A") {
+		return false
+	}
+
+	pFirst = pFirst[11:]
+	signature := "ONLYOFFICEFORM"
+	indexStream := strings.Index(pFirst, "stream\x0D\x0A")
+	indexMeta := strings.Index(pFirst, signature)
+
+	if indexStream == -1 || indexMeta == -1 || indexStream < indexMeta {
+		return false
+	}
+
+	pMeta := pFirst[indexMeta:]
+	pMeta = pMeta[len(signature)+3:]
+
+	indexMetaLast := strings.Index(pMeta, " ")
+	if indexMetaLast == -1 {
+		return false
+	}
+
+	pMeta = pMeta[indexMetaLast+1:]
+	indexMetaLast = strings.Index(pMeta, " ")
+	if indexMetaLast == -1 {
+		return false
+	}
+
+	return true
+}
+
+func (c FileController) writeFormError(rw http.ResponseWriter, status int, msg string) {
+	rw.WriteHeader(status)
+	rw.Write(response.FormCheckResponse{Error: msg}.ToJSON())
+}
+
+func (c FileController) getFileDownloadURL(ctx context.Context, apiDomain, accessToken, fileID string) (string, error) {
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/files/%s/download", strings.TrimSuffix(apiDomain, "/"), fileID), nil)
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound {
+		return "", fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	return resp.Header.Get("Location"), nil
+}
+
+func (c FileController) fetchFileHeader(ctx context.Context, url string, size int) ([]byte, error) {
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req.Header.Add("Range", fmt.Sprintf("bytes=0-%d", size-1))
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	buffer := make([]byte, size)
+	n, err := resp.Body.Read(buffer)
+	if err != nil && n == 0 {
+		return nil, err
+	}
+
+	return buffer[:n], nil
+}
+
+func (c FileController) BuildCheckForm() http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+
+		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
+		if !ok {
+			c.writeFormError(rw, http.StatusForbidden, "unauthorized")
+			return
+		}
+
+		fileID := r.URL.Query().Get("file_id")
+		if fileID == "" {
+			c.writeFormError(rw, http.StatusBadRequest, "missing file_id parameter")
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+
+		user, status := c.getUser(ctx, fmt.Sprint(pctx.UID+pctx.CID))
+		if status != http.StatusOK {
+			c.writeFormError(rw, status, "could not get user info")
+			return
+		}
+
+		durl, err := c.getFileDownloadURL(ctx, user.ApiDomain, user.AccessToken, fileID)
+		if err != nil {
+			c.logger.Errorf("could not get download url: %s", err.Error())
+			c.writeFormError(rw, http.StatusBadRequest, "could not get download url")
+			return
+		}
+
+		if durl == "" {
+			c.writeFormError(rw, http.StatusBadRequest, "empty download url")
+			return
+		}
+
+		header, err := c.fetchFileHeader(ctx, durl, 300)
+		if err != nil {
+			c.logger.Errorf("could not fetch file header: %s", err.Error())
+			c.writeFormError(rw, http.StatusBadRequest, "could not fetch file content")
+			return
+		}
+
+		rw.Write(response.FormCheckResponse{IsForm: isExtendedPDF(header)}.ToJSON())
+	}
+}
