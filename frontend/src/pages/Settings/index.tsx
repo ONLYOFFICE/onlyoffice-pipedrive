@@ -23,7 +23,6 @@ import { useTranslation } from "react-i18next";
 
 import { OnlyofficeButton } from "@components/button";
 import { OnlyofficeInput } from "@components/input";
-import { OnlyofficeTitle } from "@components/title";
 import { OnlyofficeSpinner } from "@components/spinner";
 import { OnlyofficeBackgroundError } from "@layouts/ErrorBackground";
 import { Banner } from "@layouts/Banner";
@@ -46,6 +45,15 @@ function SettingsErrorIcon() {
   );
 }
 
+const getExpirationDate = (startDate: Date): string => {
+  const expiration = new Date(startDate);
+  expiration.setDate(expiration.getDate() + 30);
+  const day = String(expiration.getDate()).padStart(2, "0");
+  const month = String(expiration.getMonth() + 1).padStart(2, "0");
+  const year = expiration.getFullYear();
+  return `${day}.${month}.${year}`;
+};
+
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
@@ -57,6 +65,8 @@ export const SettingsPage: React.FC = () => {
   const [header, setHeader] = useState<string | undefined>(undefined);
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [demoStarted, setDemoStarted] = useState<string | undefined>(undefined);
+  const [pluginsEnabled, setPluginsEnabled] = useState(true);
+  const [autofillEnabled, setAutofillEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const isDemoValid = (): boolean => {
@@ -123,12 +133,12 @@ export const SettingsPage: React.FC = () => {
     if (daysLeft > 0)
       return t(
         "settings.demo.status.active",
-        "Demo active - {{days}} day(s) remaining",
-        { days: daysLeft },
+        "You are successfully connected to the demo server. It will be available until {{date}}. To disable it, uncheck the box.",
+        { date: getExpirationDate(startDate) },
       );
     return t(
       "settings.demo.status.expired",
-      "Demo has expired - please provide credentials",
+      "The 30-day test period is over. You are no longer able to connect to the demo server.",
     );
   };
 
@@ -154,6 +164,8 @@ export const SettingsPage: React.FC = () => {
               setHeader(res.doc_header);
               setDemoEnabled(res.demo_enabled);
               setDemoStarted(res.demo_started);
+              setPluginsEnabled(res.plugins_enabled ?? true);
+              setAutofillEnabled(res.autofill_enabled ?? true);
               setAdmin(true);
             }
           } catch {
@@ -205,6 +217,8 @@ export const SettingsPage: React.FC = () => {
           secret || "",
           header || "",
           demoEnabled,
+          pluginsEnabled,
+          autofillEnabled,
         );
         setDemoStarted(demoStarted || new Date().toISOString());
         await sdk.execute(Command.SHOW_SNACKBAR, {
@@ -279,19 +293,14 @@ export const SettingsPage: React.FC = () => {
         <>
           <div className="flex flex-col items-start pl-5 pr-5 pt-5 pb-3">
             <div className="pb-2">
-              <OnlyofficeTitle
-                text={t("settings.title", "Configure ONLYOFFICE app settings")}
-              />
+              <h1 className="text-slate-800 dark:text-dark-text font-semibold text-base leading-5 tracking-normal align-middle text-left">
+                {t("settings.title", "Welcome to ONLYOFFICE App!")}
+              </h1>
             </div>
-            <p className="text-slate-800 dark:text-dark-text font-normal text-base text-left">
+            <p className="text-slate-800 dark:text-dark-text font-normal text-sm text-left leading-5 tracking-normal align-middle">
               {t(
                 "settings.text",
-                `
-                The plugin which enables the users to edit office documents from
-                Pipedrive using ONLYOFFICE Document Server, allows multiple users
-                to collaborate in real time and to save back those changes to
-                Pipedrive
-              `,
+                "View, edit and co-author text documents, spreadsheets, and presentations within the Pipedrive interface using ONLYOFFICE Docs.",
               )}
             </p>
             <div
@@ -316,10 +325,18 @@ export const SettingsPage: React.FC = () => {
               </a>
             </div>
           </div>
-          <div className="max-w-[320px]">
-            <div className="pl-5 pr-5 pb-2">
+          <div className="max-w-[388px]">
+            <div className="pl-5 pr-5 pt-3 pb-2">
+              <h2 className="text-slate-800 dark:text-dark-text font-semibold text-sm leading-5 tracking-normal">
+                {t(
+                  "settings.section.configure",
+                  "Configure ONLYOFFICE app settings",
+                )}
+              </h2>
+            </div>
+            <div className="pl-5 pr-5 pb-2" style={{ marginTop: "1.25rem" }}>
               <OnlyofficeInput
-                text={t("settings.inputs.address", "Document Server Address")}
+                text={t("settings.inputs.address", "ONLYOFFICE Docs address")}
                 valid={
                   !address || address.trim() === ""
                     ? demoEnabled && isDemoValid()
@@ -327,16 +344,17 @@ export const SettingsPage: React.FC = () => {
                 }
                 errorText={t(
                   "settings.validation.https",
-                  "Document Server must use https protocol for Pipedrive integration",
+                  "ONLYOFFICE Docs address must use https protocol for Pipedrive integration",
                 )}
                 disabled={saving}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
+                required
               />
             </div>
             <div className="pl-5 pr-5 pb-2">
               <OnlyofficeInput
-                text={t("settings.inputs.secret", "Document Server Secret")}
+                text={t("settings.inputs.secret", "ONLYOFFICE Docs secret key")}
                 valid={
                   !secret || secret.trim() === ""
                     ? demoEnabled && isDemoValid()
@@ -345,32 +363,40 @@ export const SettingsPage: React.FC = () => {
                 errorText={
                   t(
                     "settings.inputs.error.secret",
-                    "Document Server Secret is required",
-                  ) || "Document Server Secret is required"
+                    "ONLYOFFICE Docs secret key is required",
+                  ) || "ONLYOFFICE Docs secret key is required"
                 }
+                hintText={t(
+                  "settings.inputs.secret.hint",
+                  "Use the auto-generated JWT secret key or set your own here and the same one in the ONLYOFFICE Docs config file",
+                )}
                 disabled={saving}
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
                 type="password"
+                required
               />
             </div>
             <div className="pl-5 pr-5">
               <OnlyofficeInput
-                text={t("settings.inputs.header", "Document Server Header")}
+                text={t("settings.inputs.header", "JWT Header")}
                 valid={
                   !header || header.trim() === ""
                     ? demoEnabled && isDemoValid()
                     : true
                 }
                 errorText={
-                  t(
-                    "settings.inputs.error.header",
-                    "Document Server Header is required",
-                  ) || "Document Server Header is required"
+                  t("settings.inputs.error.header", "JWT Header is required") ||
+                  "JWT Header is required"
                 }
+                hintText={t(
+                  "settings.inputs.header.hint",
+                  "Leave blank to use default header",
+                )}
                 disabled={saving}
                 value={header}
                 onChange={(e) => setHeader(e.target.value)}
+                required
               />
             </div>
             <div className="pl-5 pr-5 mt-4">
@@ -395,8 +421,62 @@ export const SettingsPage: React.FC = () => {
                   ? getDemoStatus()
                   : t(
                       "settings.inputs.demo.description",
-                      "Enable demo mode to test the integration without a Document Server",
+                      "This is a public test server, please do not use it for private sensitive data. The server will be available during a 30-day period.",
                     )}
+              </p>
+            </div>
+            <div
+              className="pl-5 pr-5 pt-3 pb-2"
+              style={{ marginTop: "1.25rem" }}
+            >
+              <h2 className="text-slate-800 dark:text-dark-text font-semibold text-sm leading-5 tracking-normal">
+                {t("settings.section.security", "Security")}
+              </h2>
+            </div>
+            <div className="pl-5 pr-5" style={{ marginTop: "1.25rem" }}>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="plugins-enabled"
+                  checked={pluginsEnabled}
+                  onChange={(e) => setPluginsEnabled(e.target.checked)}
+                  disabled={saving}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label
+                  htmlFor="plugins-enabled"
+                  className="ml-2 text-sm font-medium text-gray-900 dark:text-dark-text"
+                >
+                  {t("settings.inputs.plugins", "Enable plugins")}
+                </label>
+              </div>
+            </div>
+            <div className="pl-5 pr-5" style={{ marginTop: "1.25rem" }}>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="autofill-enabled"
+                  checked={autofillEnabled}
+                  onChange={(e) => setAutofillEnabled(e.target.checked)}
+                  disabled={saving || !pluginsEnabled}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-dark-bg border-gray-300 dark:border-dark-border rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label
+                  htmlFor="autofill-enabled"
+                  className={`ml-2 text-sm font-medium ${
+                    pluginsEnabled
+                      ? "text-gray-900 dark:text-dark-text"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                >
+                  {t("settings.inputs.autofill", "Enable AI Autofill Plugin")}
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-dark-muted mt-1 ml-6">
+                {t(
+                  "settings.inputs.autofill.description",
+                  "Automatically fill document fields with data from Pipedrive deals using AI",
+                )}
               </p>
             </div>
             <div className="flex justify-start items-center mt-4 ml-5">

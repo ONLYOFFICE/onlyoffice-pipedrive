@@ -1,6 +1,6 @@
 /**
  *
- * (c) Copyright Ascensio System SIA 2025
+ * (c) Copyright Ascensio System SIA 2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,13 @@ import (
 )
 
 type DocSettings struct {
-	CompanyID   int    `json:"company_id" mapstructure:"company_id"`
-	DocAddress  string `json:"doc_address" mapstructure:"doc_address"`
-	DocSecret   string `json:"doc_secret" mapstructure:"doc_secret"`
-	DocHeader   string `json:"doc_header" mapstructure:"doc_header"`
-	DemoEnabled bool   `json:"demo_enabled" mapstructure:"demo_enabled"`
+	CompanyID       int    `json:"company_id" mapstructure:"company_id"`
+	DocAddress      string `json:"doc_address" mapstructure:"doc_address"`
+	DocSecret       string `json:"doc_secret" mapstructure:"doc_secret"`
+	DocHeader       string `json:"doc_header" mapstructure:"doc_header"`
+	DemoEnabled     bool   `json:"demo_enabled" mapstructure:"demo_enabled"`
+	PluginsEnabled  *bool  `json:"plugins_enabled" mapstructure:"plugins_enabled"`
+	AutofillEnabled *bool  `json:"autofill_enabled" mapstructure:"autofill_enabled"`
 }
 
 func (c DocSettings) ToJSON() []byte {

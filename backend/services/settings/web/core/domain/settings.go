@@ -27,17 +27,35 @@ import (
 )
 
 type DocSettings struct {
-	CompanyID   string    `json:"company_id" mapstructure:"company_id"`
-	DocAddress  string    `json:"doc_address" mapstructure:"doc_address"`
-	DocSecret   string    `json:"doc_secret" mapstructure:"doc_secret"`
-	DocHeader   string    `json:"doc_header" mapstructure:"doc_header"`
-	DemoEnabled bool      `json:"demo_enabled" mapstructure:"demo_enabled"`
-	DemoStarted time.Time `json:"demo_started" mapstructure:"demo_started"`
+	CompanyID       string    `json:"company_id" mapstructure:"company_id"`
+	DocAddress      string    `json:"doc_address" mapstructure:"doc_address"`
+	DocSecret       string    `json:"doc_secret" mapstructure:"doc_secret"`
+	DocHeader       string    `json:"doc_header" mapstructure:"doc_header"`
+	DemoEnabled     bool      `json:"demo_enabled" mapstructure:"demo_enabled"`
+	DemoStarted     time.Time `json:"demo_started" mapstructure:"demo_started"`
+	PluginsEnabled  *bool     `json:"plugins_enabled" mapstructure:"plugins_enabled"`
+	AutofillEnabled *bool     `json:"autofill_enabled" mapstructure:"autofill_enabled"`
 }
 
 func (u DocSettings) ToJSON() []byte {
 	buf, _ := json.Marshal(u)
 	return buf
+}
+
+func (u DocSettings) GetPluginsEnabled() bool {
+	if u.PluginsEnabled == nil {
+		return true
+	}
+
+	return *u.PluginsEnabled
+}
+
+func (u DocSettings) GetAutofillEnabled() bool {
+	if u.AutofillEnabled == nil {
+		return true
+	}
+
+	return *u.AutofillEnabled
 }
 
 func (u *DocSettings) Validate() error {
@@ -85,14 +103,11 @@ func (u *DocSettings) Validate() error {
 		}
 
 		staleDate := time.Now().AddDate(0, 0, -30)
-		if u.DemoStarted.Before(staleDate) {
-			return &InvalidModelFieldError{
-				Model:  "Docserver",
-				Field:  "Demo Started",
-				Reason: "Demo period has expired (more than 30 days old)",
-			}
+		if !u.DemoStarted.Before(staleDate) {
+			return nil
 		}
-		return nil
+
+		u.DemoEnabled = false
 	}
 
 	partialCredentials := u.DocAddress != "" || u.DocSecret != "" || u.DocHeader != ""

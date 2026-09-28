@@ -26,12 +26,14 @@ import (
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/middleware"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 type PipedriveHTTPService struct {
 	apiController     controller.ApiController
 	authController    controller.AuthController
 	fileController    controller.FileController
+	pluginController  controller.PluginController
 	authMiddleware    middleware.AuthMiddleware
 	contextMiddleware middleware.ContextMiddleware
 	mux               *chi.Mux
@@ -42,6 +44,7 @@ func NewServer(
 	apiController controller.ApiController,
 	authController controller.AuthController,
 	fileController controller.FileController,
+	pluginController controller.PluginController,
 	authMiddleware middleware.AuthMiddleware,
 	contextMiddleware middleware.ContextMiddleware,
 ) shttp.ServerEngine {
@@ -49,6 +52,7 @@ func NewServer(
 		apiController:     apiController,
 		authController:    authController,
 		fileController:    fileController,
+		pluginController:  pluginController,
 		authMiddleware:    authMiddleware,
 		contextMiddleware: contextMiddleware,
 		mux:               chi.NewRouter(),
@@ -89,19 +93,34 @@ func (s *PipedriveHTTPService) InitializeRoutes() {
 		})
 
 		r.Route("/api", func(cr chi.Router) {
-			cr.Use(func(h http.Handler) http.Handler {
-				return s.contextMiddleware.Protect(h)
+			cr.Get("/data", s.apiController.BuildGetData())
+			cr.Group(func(pr chi.Router) {
+				pr.Use(func(h http.Handler) http.Handler {
+					return s.contextMiddleware.Protect(h)
+				})
+				pr.Get("/me", s.apiController.BuildGetMe())
+				pr.Get("/config", s.apiController.BuildGetConfig())
+				pr.Post("/settings", s.apiController.BuildPostSettings())
+				pr.Get("/settings", s.apiController.BuildGetSettings())
+				pr.Get("/settings/check", s.apiController.BuildCheckSettings())
 			})
-			cr.Get("/me", s.apiController.BuildGetMe())
-			cr.Get("/config", s.apiController.BuildGetConfig())
-			cr.Post("/settings", s.apiController.BuildPostSettings())
-			cr.Get("/settings", s.apiController.BuildGetSettings())
-			cr.Get("/settings/check", s.apiController.BuildCheckSettings())
 		})
 
 		r.Route("/files", func(fr chi.Router) {
 			fr.Get("/download", s.fileController.BuildGetDownloadUrl())
 			fr.Get("/create", s.contextMiddleware.Protect(s.fileController.BuildGetFile()))
+			fr.Get("/check", s.contextMiddleware.Protect(s.fileController.BuildCheckForm()))
+		})
+
+		r.Route("/plugins", func(pr chi.Router) {
+			pr.Use(cors.Handler(cors.Options{
+				AllowedOrigins:   []string{"*"},
+				AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+				AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With", "Origin"},
+				AllowCredentials: false,
+				MaxAge:           86400,
+			}))
+			pr.Handle("/aiautofill/*", s.pluginController.BuildServePlugin())
 		})
 	})
 }

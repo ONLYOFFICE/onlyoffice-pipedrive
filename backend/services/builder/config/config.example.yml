@@ -31,6 +31,10 @@ onlyoffice:
     document_server_header: ""
     gateway_url: ""
     callback_url: ""
+    plugin_guid: ""
+    autofiller_url: ""
+    autofiller_config: ""
+    autofiller_callback: ""
   demo:
     document_server_url: ""
     document_server_secret: ""

@@ -58,12 +58,16 @@ func (u SettingsSelectHandler) GetSettings(ctx context.Context, cid *string, res
 	})
 
 	if set, ok := settings.(domain.DocSettings); ok {
+		pluginsEnabled := set.GetPluginsEnabled()
+		autofillEnabled := set.GetAutofillEnabled()
 		*res = response.DocSettingsResponse{
-			DocAddress:  set.DocAddress,
-			DocSecret:   set.DocSecret,
-			DocHeader:   set.DocHeader,
-			DemoEnabled: set.DemoEnabled,
-			DemoStarted: set.DemoStarted,
+			DocAddress:      set.DocAddress,
+			DocSecret:       set.DocSecret,
+			DocHeader:       set.DocHeader,
+			DemoEnabled:     set.DemoEnabled,
+			DemoStarted:     set.DemoStarted,
+			PluginsEnabled:  &pluginsEnabled,
+			AutofillEnabled: &autofillEnabled,
 		}
 		return nil
 	}

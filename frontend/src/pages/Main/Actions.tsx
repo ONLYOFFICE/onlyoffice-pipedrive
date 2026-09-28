@@ -16,7 +16,7 @@
  *
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import i18next from "i18next";
 import md5 from "md5";
 import AppExtensionsSDK, { Command } from "@pipedrive/app-extensions-sdk";
@@ -27,29 +27,36 @@ import { useDeleteFile } from "@hooks/useDeleteFile";
 
 import { downloadFile } from "@services/file";
 
-import { getFileParts, isFileSupported } from "@utils/file";
 import { getCurrentURL } from "@utils/url";
+import { getFileParts, isFileEditable, isFileSupported } from "@utils/file";
 
 import { File } from "src/types/file";
 
-import Pencil from "@assets/pencil.svg";
-import PencilDark from "@assets/pencil_dark.svg";
-import Download from "@assets/download.svg";
-import DownloadDark from "@assets/download_dark.svg";
-import Trash from "@assets/trash.svg";
-import TrashDark from "@assets/trash_dark.svg";
+import More from "@assets/more.svg";
+import MoreDark from "@assets/more_dark.svg";
 
 type FileActionsProps = {
   file: File;
+  onRenameClick: () => void;
+  isRenaming?: boolean;
 };
 
-export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
+export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({
+  file,
+  onRenameClick,
+  isRenaming = false,
+}) => {
   const { t } = useTranslation();
   const { url, parameters } = getCurrentURL();
   const { isDark } = useTheme();
   const [sdk, setSDK] = useState<AppExtensionsSDK | null>();
   const [disable, setDisable] = useState(false);
-  const mutator = useDeleteFile(`${url}api/v1/files/${file.id}`);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [openDirectionReverse, setOpenDirectionReverse] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const deleteMutator = useDeleteFile(`${url}api/v1/files/${file.id}`);
 
   useEffect(() => {
     new AppExtensionsSDK()
@@ -58,9 +65,49 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
       .catch(() => setSDK(null));
   }, []);
 
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  const checkPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = 128;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const shouldReverse = spaceBelow < dropdownHeight + 20;
+      setOpenDirectionReverse(shouldReverse);
+    }
+  };
+
+  useEffect(() => {
+    if (isDropdownOpen) {
+      checkPosition();
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  const handleMenuItemClick =
+    (handler: () => void) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDropdownOpen(false);
+      if (!disable) {
+        handler();
+      }
+    };
+
   const handleDelete = () => {
     setDisable(true);
-    mutator
+    deleteMutator
       .mutateAsync()
       .then(async () => {
         await sdk?.execute(Command.SHOW_SNACKBAR, {
@@ -81,6 +128,12 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
           ),
         });
       });
+  };
+
+  const handleRename = () => {
+    if (!disable) {
+      onRenameClick();
+    }
   };
 
   const handleEditor = async () => {
@@ -122,72 +175,98 @@ export const OnlyofficeFileActions: React.FC<FileActionsProps> = ({ file }) => {
     }
   };
 
-  const handleClick = (handler: () => void) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!disable) {
-      handler();
-    }
-  };
-
-  const handleKeyDown = (handler: () => void) => (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!disable) {
-        handler();
-      }
-    }
-  };
-
-  const isEditorDisabled = !isFileSupported(file.name) || disable;
-  const isDownloadDisabled = disable;
-  const isDeleteDisabled = disable;
+  const isEditorDisabled = !isFileSupported(file.name) || disable || isRenaming;
+  const isDownloadDisabled = disable || isRenaming;
+  const isRenameDisabled = disable || isRenaming;
+  const isDeleteDisabled = disable || isRenaming;
 
   return (
-    <>
-      <div
-        role="button"
-        tabIndex={isEditorDisabled ? -1 : 0}
-        className={`${
-          isEditorDisabled
-            ? "hover:cursor-default opacity-50"
-            : "hover:cursor-pointer"
-        } mx-1`}
-        onClick={isEditorDisabled ? undefined : handleClick(handleEditor)}
-        onKeyDown={isEditorDisabled ? undefined : handleKeyDown(handleEditor)}
-        aria-disabled={isEditorDisabled}
+    <div className="relative" ref={dropdownRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDropdownOpen(!isDropdownOpen);
+        }}
+        aria-label={t("files.actions.menu", "Actions menu")}
+        aria-expanded={isDropdownOpen}
       >
-        {isDark ? <PencilDark /> : <Pencil />}
-      </div>
-      <div
-        role="button"
-        tabIndex={isDownloadDisabled ? -1 : 0}
-        className={`mx-1 ${
-          isDownloadDisabled
-            ? "hover:cursor-default opacity-50"
-            : "hover:cursor-pointer"
-        }`}
-        onClick={handleClick(handleDownload)}
-        onKeyDown={handleKeyDown(handleDownload)}
-        aria-disabled={isDownloadDisabled}
-      >
-        {isDark ? <DownloadDark /> : <Download />}
-      </div>
-      <div
-        role="button"
-        tabIndex={isDeleteDisabled ? -1 : 0}
-        className={`mx-1 ${
-          isDeleteDisabled
-            ? "hover:cursor-default opacity-50"
-            : "hover:cursor-pointer"
-        }`}
-        onClick={handleClick(handleDelete)}
-        onKeyDown={handleKeyDown(handleDelete)}
-        aria-disabled={isDeleteDisabled}
-      >
-        {isDark ? <TrashDark /> : <Trash />}
-      </div>
-    </>
+        {isDark ? <MoreDark /> : <More />}
+      </button>
+
+      {isDropdownOpen && (
+        <div
+          className={`absolute right-0 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg shadow-lg z-50 ${
+            openDirectionReverse ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
+          style={{ width: "8.375rem", maxWidth: "12.5rem" }}
+        >
+          <div>
+            <button
+              type="button"
+              className={`w-full px-4 text-sm text-left ${
+                isEditorDisabled
+                  ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+              style={{ height: "2rem" }}
+              onClick={
+                isEditorDisabled ? undefined : handleMenuItemClick(handleEditor)
+              }
+              disabled={isEditorDisabled}
+            >
+              {isFileEditable(file.name)
+                ? t("files.actions.edit", "Edit")
+                : t("files.actions.view", "View")}
+            </button>
+
+            <button
+              type="button"
+              className={`w-full px-4 text-sm text-left ${
+                isRenameDisabled
+                  ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+              style={{ height: "2rem" }}
+              onClick={handleMenuItemClick(handleRename)}
+              disabled={isRenameDisabled}
+            >
+              {t("files.actions.rename", "Rename")}
+            </button>
+
+            <button
+              type="button"
+              className={`w-full px-4 text-sm text-left ${
+                isDownloadDisabled
+                  ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+              style={{ height: "2rem" }}
+              onClick={handleMenuItemClick(handleDownload)}
+              disabled={isDownloadDisabled}
+            >
+              {t("files.actions.download", "Download")}
+            </button>
+
+            <button
+              type="button"
+              className={`w-full px-4 text-sm text-left ${
+                isDeleteDisabled
+                  ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+              style={{ height: "2rem" }}
+              onClick={handleMenuItemClick(handleDelete)}
+              disabled={isDeleteDisabled}
+            >
+              {t("files.actions.delete", "Delete")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

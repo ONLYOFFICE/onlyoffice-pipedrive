@@ -16,4 +16,4 @@
  *
  */
 
-export { OnlyofficeInput } from "./Input";
+export { OnlyofficeInput, type InputProps } from "./Input";

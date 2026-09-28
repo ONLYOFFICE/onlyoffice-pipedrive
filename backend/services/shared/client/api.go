@@ -1,6 +1,6 @@
 /**
  *
- * (c) Copyright Ascensio System SIA 2025
+ * (c) Copyright Ascensio System SIA 2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,118 @@ func NewPipedriveApiClient() PipedriveApiClient {
 				return r.StatusCode() == http.StatusTooManyRequests
 			}),
 	}
+}
+
+func (p *PipedriveApiClient) GetOrganization(ctx context.Context, id string, token model.Token) (map[string]any, error) {
+	var resp model.OrganizationResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/organizations/%s", token.ApiDomain, id))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return nil, &UnexpectedStatusCodeError{
+			Action: "get organization",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	return resp.Data, nil
+}
+
+func (p *PipedriveApiClient) GetPerson(ctx context.Context, id string, token model.Token) (model.PersonData, error) {
+	var resp model.PersorResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/persons/%s", token.ApiDomain, id))
+
+	if err != nil {
+		return model.PersonData{}, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return model.PersonData{}, &UnexpectedStatusCodeError{
+			Action: "get person",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	return resp.Data, nil
+}
+
+func (p *PipedriveApiClient) GetDealProducts(ctx context.Context, id string, token model.Token) ([]model.Product, error) {
+	var resp model.ProductsResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/deals/%s/products", token.ApiDomain, id))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return nil, &UnexpectedStatusCodeError{
+			Action: "get deal products",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	if !resp.Success {
+		return nil, &UnexpectedStatusCodeError{
+			Action: "get deal products",
+			Code:   http.StatusInternalServerError,
+		}
+	}
+
+	// TODO: Handle pagination more gracefully
+	if len(resp.Data) > 5 {
+		return resp.Data[:5], nil
+	}
+
+	return resp.Data, nil
+}
+
+func (p *PipedriveApiClient) GetDeal(ctx context.Context, id string, token model.Token) (model.Deal, error) {
+	var deal model.Deal
+	var resp model.DealResponse
+
+	res, err := p.client.R().
+		SetContext(ctx).
+		SetAuthToken(token.AccessToken).
+		SetResult(&resp).
+		Get(fmt.Sprintf("%s/api/v2/deals/%s", token.ApiDomain, id))
+
+	if err != nil {
+		return deal, err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		return deal, &UnexpectedStatusCodeError{
+			Action: "get deal",
+			Code:   res.StatusCode(),
+		}
+	}
+
+	if !resp.Success {
+		return deal, &UnexpectedStatusCodeError{
+			Action: "get deal",
+			Code:   http.StatusInternalServerError,
+		}
+	}
+
+	return resp.Data, nil
 }
 
 func (p *PipedriveApiClient) GetMe(ctx context.Context, token model.Token) (model.User, error) {
@@ -154,8 +266,17 @@ func (p PipedriveApiClient) getFile(ctx context.Context, url string) (io.ReadClo
 	return fileResp.RawBody(), nil
 }
 
-func (p *PipedriveApiClient) UploadFile(ctx context.Context, url, deal, fileID, filename string, size int64, token model.Token) error {
-	if err := p.UpdateFile(ctx, fileID, filename, token); err != nil {
+func (p *PipedriveApiClient) UploadFile(
+	ctx context.Context,
+	url,
+	deal,
+	fileID,
+	originalFilename,
+	newFilename string,
+	size int64,
+	token model.Token,
+) error {
+	if err := p.UpdateFile(ctx, fileID, originalFilename, token); err != nil {
 		return err
 	}
 
@@ -168,7 +289,7 @@ func (p *PipedriveApiClient) UploadFile(ctx context.Context, url, deal, fileID, 
 	_, err = p.client.R().
 		SetContext(ctx).
 		SetAuthToken(token.AccessToken).
-		SetFileReader("file", filename, file).
+		SetFileReader("file", newFilename, file).
 		SetFormData(map[string]string{
 			"deal_id": deal,
 		}).

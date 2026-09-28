@@ -32,6 +32,7 @@ import (
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/config"
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/crypto"
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/log"
+	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/core/port"
 	pclient "github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/client"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/client/model"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/request"
@@ -48,6 +49,7 @@ type ApiController struct {
 	commandClient pclient.CommandClient
 	jwtManager    crypto.JwtManager
 	config        *config.ServerConfig
+	accessService port.AICodeAccessService
 	logger        log.Logger
 }
 
@@ -57,6 +59,7 @@ func NewApiController(
 	commandClient pclient.CommandClient,
 	jwtManager crypto.JwtManager,
 	serverConfig *config.ServerConfig,
+	accessService port.AICodeAccessService,
 	logger log.Logger,
 ) ApiController {
 	return ApiController{
@@ -66,19 +69,86 @@ func NewApiController(
 		jwtManager:    jwtManager,
 		config:        serverConfig,
 		logger:        logger,
+		accessService: accessService,
 	}
+}
+
+func (c *ApiController) writeJSONResponse(rw http.ResponseWriter, data interface{}) {
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Write(data.(interface{ ToJSON() []byte }).ToJSON())
+}
+
+func (c *ApiController) writeErrorResponse(rw http.ResponseWriter, status int) {
+	rw.WriteHeader(status)
+}
+
+func (c *ApiController) extractPipedriveContext(r *http.Request) (request.PipedriveTokenContext, bool) {
+	pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
+	if !ok {
+		c.logger.Error("could not extract pipedrive context from the context")
+	}
+
+	return pctx, ok
+}
+
+func (c *ApiController) createTimeoutContext(r *http.Request, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(r.Context(), timeout)
+}
+
+func (c *ApiController) handleMicroError(err error, rw http.ResponseWriter, defaultStatus int) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		c.writeErrorResponse(rw, http.StatusRequestTimeout)
+		return
+	}
+
+	microErr := response.MicroError{}
+	if unmarshalErr := json.Unmarshal([]byte(err.Error()), &microErr); unmarshalErr != nil {
+		c.writeErrorResponse(rw, defaultStatus)
+		return
+	}
+
+	c.writeErrorResponse(rw, microErr.Code)
+}
+
+func (c *ApiController) createToken(ures response.UserResponse) model.Token {
+	return model.Token{
+		AccessToken:  ures.AccessToken,
+		RefreshToken: ures.RefreshToken,
+		TokenType:    ures.TokenType,
+		Scope:        ures.Scope,
+		ApiDomain:    ures.ApiDomain,
+	}
+}
+
+func (c *ApiController) getUserID(pctx request.PipedriveTokenContext) string {
+	return fmt.Sprint(pctx.UID + pctx.CID)
+}
+
+func (c *ApiController) validateUserAccess(ctx context.Context, token model.Token) error {
+	user, err := c.apiClient.GetMe(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	for _, access := range user.Access {
+		if access.App == "global" && !access.Admin {
+			return ErrNotAdmin
+		}
+	}
+	return nil
 }
 
 func (c *ApiController) getUser(ctx context.Context, id string) (response.UserResponse, int, error) {
 	var ures response.UserResponse
-	if err := c.client.Call(ctx, c.client.NewRequest(fmt.Sprintf("%s:auth", c.config.Namespace), "UserSelectHandler.GetUser", id), &ures); err != nil {
+	err := c.client.Call(ctx, c.client.NewRequest(fmt.Sprintf("%s:auth", c.config.Namespace), "UserSelectHandler.GetUser", id), &ures)
+	if err != nil {
 		c.logger.Errorf("could not get user access info: %s", err.Error())
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return ures, http.StatusRequestTimeout, err
 		}
 
 		microErr := response.MicroError{}
-		if err := json.Unmarshal([]byte(err.Error()), &microErr); err != nil {
+		if unmarshalErr := json.Unmarshal([]byte(err.Error()), &microErr); unmarshalErr != nil {
 			return ures, http.StatusUnauthorized, err
 		}
 
@@ -88,68 +158,249 @@ func (c *ApiController) getUser(ctx context.Context, id string) (response.UserRe
 	return ures, http.StatusOK, nil
 }
 
-func (c ApiController) BuildGetMe() http.HandlerFunc {
+func (c *ApiController) getAccess(ctx context.Context, code string) (request.DataRequest, error) {
+	access, err := c.accessService.GetCodeAccess(ctx, code)
+	if err != nil {
+		c.logger.Errorf("could not get AI access code: %s", err.Error())
+		return request.DataRequest{}, err
+	}
+
+	userID, _ := strconv.Atoi(access.UserID)
+	return request.DataRequest{
+		UserID: userID,
+		FileID: access.FileID,
+		DealID: access.DealID,
+	}, nil
+}
+
+func (c *ApiController) regenerateAccess(ctx context.Context, userID, fileID, dealID string) (string, error) {
+	code, err := c.accessService.RegenerateCodeAccess(ctx, userID, fileID, dealID)
+	if err != nil {
+		c.logger.Errorf("could not regenerate AI access code: %s", err.Error())
+		return "", err
+	}
+
+	return code, nil
+}
+
+func (c *ApiController) BuildGetMe() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
+		pctx, ok := c.extractPipedriveContext(r)
 		if !ok {
-			rw.WriteHeader(http.StatusForbidden)
-			c.logger.Error("could not extract pipedrive context from the context")
+			c.writeErrorResponse(rw, http.StatusForbidden)
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		ctx, cancel := c.createTimeoutContext(r, 5*time.Second)
 		defer cancel()
 
-		ures, status, _ := c.getUser(ctx, fmt.Sprint(pctx.UID+pctx.CID))
+		ures, status, _ := c.getUser(ctx, c.getUserID(pctx))
 		if status != http.StatusOK {
-			rw.WriteHeader(status)
+			c.writeErrorResponse(rw, status)
 			return
 		}
 
-		rw.Write(response.UserTokenResponse{
+		c.writeJSONResponse(rw, response.UserTokenResponse{
 			ID:          ures.ID,
 			AccessToken: ures.AccessToken,
 			ExpiresAt:   ures.ExpiresAt,
-		}.ToJSON())
+		})
 	}
 }
 
-func (c ApiController) BuildPostSettings() http.HandlerFunc {
+func (c *ApiController) fetchUserWithCode(ctx context.Context, userID, fileID, dealID string) (response.UserResponse, string, error) {
+	var (
+		ures response.UserResponse
+		code string
+	)
+
+	eg, ectx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var status int
+		var err error
+		ures, status, err = c.getUser(ectx, userID)
+		if err != nil {
+			c.logger.Errorf("failed to get user: %s", err.Error())
+			return err
+		}
+		if status != http.StatusOK {
+			return fmt.Errorf("user fetch failed with status: %d", status)
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		code, err = c.regenerateAccess(ectx, userID, fileID, dealID)
+		if err != nil {
+			c.logger.Errorf("failed to regenerate access: %s", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return response.UserResponse{}, "", err
+	}
+
+	return ures, code, nil
+}
+
+func (c *ApiController) fetchMeWithDeal(ctx context.Context, token model.Token, dealID string) (model.User, model.Deal, error) {
+	var (
+		user model.User
+		deal model.Deal
+	)
+
+	eg, ectx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		user, err = c.apiClient.GetMe(ectx, token)
+		if err != nil {
+			c.logger.Errorf("failed to get user details: %s", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		deal, err = c.apiClient.GetDeal(ectx, dealID, token)
+		if err != nil {
+			c.logger.Errorf("failed to get deal: %s", err.Error())
+			return err
+		}
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return model.User{}, model.Deal{}, err
+	}
+
+	return user, deal, nil
+}
+
+func (c *ApiController) fetchDealData(ctx context.Context, dealID, organizationID, personID string, token model.Token) (model.PersonData, map[string]any, []model.Product) {
+	var (
+		buyer        model.PersonData
+		organization map[string]any
+		products     []model.Product
+	)
+
+	eg, ectx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		buyer, err = c.apiClient.GetPerson(ectx, personID, token)
+		if err != nil {
+			c.logger.Warnf("failed to get buyer: %s", err.Error())
+		}
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		organization, err = c.apiClient.GetOrganization(ectx, organizationID, token)
+		if err != nil {
+			c.logger.Warnf("failed to get organization: %s", err.Error())
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
+		var err error
+		products, err = c.apiClient.GetDealProducts(ectx, dealID, token)
+		if err != nil {
+			c.logger.Warnf("failed to get deal products: %s", err.Error())
+		}
+
+		return nil
+	})
+
+	_ = eg.Wait()
+
+	return buyer, organization, products
+}
+
+func (c *ApiController) BuildGetData() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
-		if !ok {
-			c.logger.Error("could not extract pipedrive context from the context")
-			rw.WriteHeader(http.StatusForbidden)
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
-		len, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 0)
-		if err != nil || (len/100000) > 10 {
-			rw.WriteHeader(http.StatusBadRequest)
+		ctx, cancel := c.createTimeoutContext(r, 7*time.Second)
+		defer cancel()
+
+		data, err := c.getAccess(ctx, code)
+		if err != nil {
+			c.writeErrorResponse(rw, http.StatusNotFound)
+			return
+		}
+
+		ures, code, err := c.fetchUserWithCode(ctx, fmt.Sprint(data.UserID), data.FileID, data.DealID)
+		if err != nil {
+			c.writeErrorResponse(rw, http.StatusInternalServerError)
+			return
+		}
+
+		token := c.createToken(ures)
+
+		user, deal, err := c.fetchMeWithDeal(ctx, token, data.DealID)
+		if err != nil {
+			c.writeErrorResponse(rw, http.StatusInternalServerError)
+			return
+		}
+
+		buyer, organization, products := c.fetchDealData(ctx, data.DealID, fmt.Sprint(deal.OrgID), fmt.Sprint(deal.PersonID), token)
+
+		c.writeJSONResponse(rw, response.DataResponse{
+			Data: map[string]any{
+				"seller":       user,
+				"deal":         deal,
+				"buyer":        buyer,
+				"organization": organization,
+				"products":     products,
+			},
+			Code: code,
+		})
+	}
+}
+
+func (c *ApiController) BuildPostSettings() http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		pctx, ok := c.extractPipedriveContext(r)
+		if !ok {
+			c.writeErrorResponse(rw, http.StatusForbidden)
+			return
+		}
+
+		contentLen, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 0)
+		if err != nil || (contentLen/100000) > 10 {
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
 		var settings request.DocSettings
 		if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			c.logger.Errorf(err.Error())
+			c.logger.Errorf("decode error: %s", err.Error())
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
 		settings.CompanyID = pctx.CID
 		if err := settings.Validate(); err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
 			c.logger.Errorf("invalid settings format: %s", err.Error())
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		ctx, cancel := c.createTimeoutContext(r, 10*time.Second)
 		defer cancel()
 
 		var companyID int64
-
 		eg, ectx := errgroup.WithContext(ctx)
 
 		if !settings.DemoEnabled {
@@ -174,27 +425,21 @@ func (c ApiController) BuildPostSettings() http.HandlerFunc {
 			case <-ectx.Done():
 				return ectx.Err()
 			default:
-				ures, _, err := c.getUser(ectx, fmt.Sprint(pctx.UID+pctx.CID))
+				ures, _, err := c.getUser(ectx, c.getUserID(pctx))
 				if err != nil {
 					return err
 				}
 
-				urs, err := c.apiClient.GetMe(ectx, model.Token{
-					AccessToken:  ures.AccessToken,
-					RefreshToken: ures.RefreshToken,
-					TokenType:    ures.TokenType,
-					Scope:        ures.Scope,
-					ApiDomain:    ures.ApiDomain,
-				})
-				if err != nil {
-					c.logger.Errorf("could not get pipedrive user or no user has admin permissions")
+				token := c.createToken(ures)
+				if err := c.validateUserAccess(ectx, token); err != nil {
+					c.logger.Errorf("user validation failed: %s", err.Error())
 					return err
 				}
 
-				for _, access := range urs.Access {
-					if access.App == "global" && !access.Admin {
-						return ErrNotAdmin
-					}
+				urs, err := c.apiClient.GetMe(ectx, token)
+				if err != nil {
+					c.logger.Errorf("could not get pipedrive user: %s", err.Error())
+					return err
 				}
 
 				atomic.StoreInt64(&companyID, int64(urs.CompanyID))
@@ -205,123 +450,112 @@ func (c ApiController) BuildPostSettings() http.HandlerFunc {
 		if err := eg.Wait(); err != nil {
 			c.logger.Errorf("validation failed: %s", err.Error())
 			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-				c.logger.Errorf("request timeout during validation")
-				rw.WriteHeader(http.StatusRequestTimeout)
+				c.writeErrorResponse(rw, http.StatusRequestTimeout)
 			} else if errors.Is(err, ErrNotAdmin) {
-				c.logger.Errorf("user does not have admin permissions")
-				rw.WriteHeader(http.StatusForbidden)
+				c.writeErrorResponse(rw, http.StatusForbidden)
 			} else {
-				c.logger.Errorf("other validation error: %s", err.Error())
-				rw.WriteHeader(http.StatusForbidden)
+				c.writeErrorResponse(rw, http.StatusForbidden)
 			}
 			return
 		}
 
 		sreq := request.DocSettings{
-			CompanyID:   int(atomic.LoadInt64(&companyID)),
-			DocAddress:  settings.DocAddress,
-			DocHeader:   settings.DocHeader,
-			DocSecret:   settings.DocSecret,
-			DemoEnabled: settings.DemoEnabled,
+			CompanyID:       int(atomic.LoadInt64(&companyID)),
+			DocAddress:      settings.DocAddress,
+			DocHeader:       settings.DocHeader,
+			DocSecret:       settings.DocSecret,
+			DemoEnabled:     settings.DemoEnabled,
+			PluginsEnabled:  settings.PluginsEnabled,
+			AutofillEnabled: settings.AutofillEnabled,
 		}
 
 		tctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 
-		var sres interface{}
-		if err := c.client.Call(
+		var sres any
+		err = c.client.Call(
 			tctx,
 			c.client.NewRequest(
 				fmt.Sprintf("%s:settings", c.config.Namespace),
 				"SettingsInsertHandler.InsertSettings",
 				sreq,
-			), &sres); err != nil {
+			), &sres)
+		if err != nil {
 			c.logger.Errorf("could not post new settings: %s", err.Error())
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				rw.WriteHeader(http.StatusRequestTimeout)
-				return
-			}
-
-			microErr := response.MicroError{}
-			if err := json.Unmarshal([]byte(err.Error()), &microErr); err != nil {
-				rw.WriteHeader(http.StatusUnauthorized)
-				c.logger.Errorf("could not post new settings: %s", err.Error())
-				return
-			}
-
-			rw.WriteHeader(microErr.Code)
+			c.handleMicroError(err, rw, http.StatusUnauthorized)
 			return
 		}
 
-		rw.WriteHeader(http.StatusCreated)
+		c.writeErrorResponse(rw, http.StatusCreated)
 	}
 }
 
-func (c ApiController) BuildGetSettings() http.HandlerFunc {
+func (c *ApiController) BuildGetSettings() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
+		pctx, ok := c.extractPipedriveContext(r)
 		if !ok {
-			rw.WriteHeader(http.StatusForbidden)
-			c.logger.Error("could not extract pipedrive context from the context")
+			c.writeErrorResponse(rw, http.StatusForbidden)
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		ctx, cancel := c.createTimeoutContext(r, 5*time.Second)
 		defer cancel()
 
-		ures, status, _ := c.getUser(ctx, fmt.Sprint(pctx.UID+pctx.CID))
-		if status != http.StatusOK {
-			rw.WriteHeader(status)
-			return
-		}
+		var (
+			ures response.UserResponse
+			docs response.DocSettingsResponse
+		)
 
-		urs, _ := c.apiClient.GetMe(ctx, model.Token{
-			AccessToken:  ures.AccessToken,
-			RefreshToken: ures.RefreshToken,
-			TokenType:    ures.TokenType,
-			Scope:        ures.Scope,
-			ApiDomain:    ures.ApiDomain,
+		eg, ectx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			var status int
+			var err error
+			ures, status, err = c.getUser(ectx, c.getUserID(pctx))
+			if err != nil {
+				return err
+			}
+			if status != http.StatusOK {
+				return fmt.Errorf("user fetch failed with status: %d", status)
+			}
+
+			token := c.createToken(ures)
+			if err := c.validateUserAccess(ectx, token); err != nil {
+				return err
+			}
+			return nil
 		})
 
-		for _, access := range urs.Access {
-			if access.App == "global" && !access.Admin {
-				rw.WriteHeader(http.StatusForbidden)
-				return
+		eg.Go(func() error {
+			err := c.client.Call(
+				ectx,
+				c.client.NewRequest(
+					fmt.Sprintf("%s:settings", c.config.Namespace),
+					"SettingsSelectHandler.GetSettings",
+					fmt.Sprint(pctx.CID),
+				),
+				&docs,
+			)
+			if err != nil {
+				c.logger.Errorf("could not get settings: %s", err.Error())
+				return err
 			}
-		}
+			return nil
+		})
 
-		var docs response.DocSettingsResponse
-		if err := c.client.Call(
-			ctx,
-			c.client.NewRequest(
-				fmt.Sprintf("%s:settings", c.config.Namespace),
-				"SettingsSelectHandler.GetSettings",
-				fmt.Sprint(pctx.CID),
-			),
-			&docs,
-		); err != nil {
-			c.logger.Errorf("could not get settings: %s", err.Error())
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				rw.WriteHeader(http.StatusRequestTimeout)
-				return
+		if err := eg.Wait(); err != nil {
+			if errors.Is(err, ErrNotAdmin) {
+				c.writeErrorResponse(rw, http.StatusForbidden)
+			} else {
+				c.handleMicroError(err, rw, http.StatusUnauthorized)
 			}
-
-			microErr := response.MicroError{}
-			if err := json.Unmarshal([]byte(err.Error()), &microErr); err != nil {
-				rw.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-
-			rw.WriteHeader(microErr.Code)
 			return
 		}
 
-		rw.Write(docs.ToJSON())
+		c.writeJSONResponse(rw, docs)
 	}
 }
 
-func (c ApiController) BuildCheckSettings() http.HandlerFunc {
+func (c *ApiController) BuildCheckSettings() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
@@ -356,44 +590,54 @@ func (c ApiController) BuildCheckSettings() http.HandlerFunc {
 	}
 }
 
-func (c ApiController) BuildGetConfig() http.HandlerFunc {
+func (c *ApiController) BuildGetConfig() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-
-		query := r.URL.Query()
-		id, filename, key, dealID, dark := strings.TrimSpace(query.Get("id")), strings.TrimSpace(query.Get("name")),
-			strings.TrimSpace(query.Get("key")), strings.TrimSpace(query.Get("deal_id")), query.Get("dark") == "true"
-
-		pctx, ok := r.Context().Value("X-Pipedrive-App-Context").(request.PipedriveTokenContext)
+		pctx, ok := c.extractPipedriveContext(r)
 		if !ok {
-			rw.WriteHeader(http.StatusForbidden)
-			c.logger.Error("could not extract pipedrive context from the context")
+			c.writeErrorResponse(rw, http.StatusForbidden)
 			return
 		}
 
+		query := r.URL.Query()
+		id := strings.TrimSpace(query.Get("id"))
+		filename := strings.TrimSpace(query.Get("name"))
+		key := strings.TrimSpace(query.Get("key"))
+		dealID := strings.TrimSpace(query.Get("deal_id"))
+		dark := query.Get("dark") == "true"
+
 		if filename == "" {
-			rw.WriteHeader(http.StatusBadRequest)
 			c.logger.Error("could not extract file name from URL Query")
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
 		if len(filename) > 200 {
-			rw.WriteHeader(http.StatusBadRequest)
 			c.logger.Error("file length is greater than 200")
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
 		if key == "" {
-			rw.WriteHeader(http.StatusBadRequest)
 			c.logger.Error("could not extract doc key from URL Query")
+			c.writeErrorResponse(rw, http.StatusBadRequest)
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
+		ctx, cancel := c.createTimeoutContext(r, 6*time.Second)
 		defer cancel()
 
-		var resp response.BuildConfigResponse
-		if err := c.client.Call(
+		var (
+			resp response.BuildConfigResponse
+		)
+
+		code, err := c.accessService.RegenerateCodeAccess(ctx, c.getUserID(pctx), id, dealID)
+		if err != nil {
+			c.logger.Errorf("could not regenerate AI access code: %s", err.Error())
+			c.handleMicroError(err, rw, http.StatusInternalServerError)
+			return
+		}
+
+		err = c.client.Call(
 			ctx,
 			c.client.NewRequest(
 				fmt.Sprintf("%s:builder", c.config.Namespace),
@@ -407,33 +651,19 @@ func (c ApiController) BuildGetConfig() http.HandlerFunc {
 					FileID:    id,
 					DocKey:    key,
 					Dark:      dark,
+					Code:      code,
 				},
 			),
 			&resp,
-		); err != nil {
+		)
+
+		if err != nil {
 			c.logger.Errorf("could not build onlyoffice config: %s", err.Error())
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				rw.WriteHeader(http.StatusRequestTimeout)
-				return
-			}
-
-			microErr := response.MicroError{}
-			if err := json.Unmarshal([]byte(err.Error()), &microErr); err != nil {
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			if strings.Contains(err.Error(), "could not find document server settings") {
-				rw.WriteHeader(http.StatusPreconditionFailed)
-				return
-			}
-
-			c.logger.Errorf("build config micro error: %s", microErr.Detail)
-			rw.WriteHeader(microErr.Code)
+			c.handleMicroError(err, rw, http.StatusInternalServerError)
 			return
 		}
 
 		rw.WriteHeader(http.StatusOK)
-		rw.Write(resp.ToJSON())
+		c.writeJSONResponse(rw, resp)
 	}
 }

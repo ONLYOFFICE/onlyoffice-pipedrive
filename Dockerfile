@@ -1,4 +1,4 @@
-FROM node:current-alpine AS build-frontend
+FROM node:22.16.0-alpine AS build-frontend
 LABEL maintainer Ascensio System SIA <support@onlyoffice.com>
 ARG BACKEND_GATEWAY
 ARG PIPEDRIVE_CREATE_MODAL_ID
