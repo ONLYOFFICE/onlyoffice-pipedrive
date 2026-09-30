@@ -241,7 +241,8 @@ func (c ConfigHandler) processConfig(user response.UserResponse, req request.Bui
 			return err
 		}
 
-		if c.isDemoModeValid(docs) {
+		docs.DemoEnabled = c.isDemoModeValid(docs)
+		if docs.DemoEnabled {
 			if c.onlyoffice.Onlyoffice.Demo.DocumentServerURL == "" ||
 				c.onlyoffice.Onlyoffice.Demo.DocumentServerSecret == "" ||
 				c.onlyoffice.Onlyoffice.Demo.DocumentServerHeader == "" {
