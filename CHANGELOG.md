@@ -1,5 +1,9 @@
 # Change Log
 
+##
+## Changed
+- update AI Auto Fill Plugin
+
 ## 1.2.0
 ## Added
 - using AI Auto Fill Plugin
