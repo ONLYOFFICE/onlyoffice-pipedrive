@@ -31,6 +31,7 @@ import (
 
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/config"
 	"github.com/ONLYOFFICE/onlyoffice-integration-adapters/log"
+	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/gateway/web/controller/view"
 	pclient "github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/client"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/request"
 	"github.com/ONLYOFFICE/onlyoffice-pipedrive/services/shared/response"
@@ -85,8 +86,12 @@ func (c AuthController) BuildGetAuth() http.HandlerFunc {
 		c.logger.Debug("a new auth request")
 		code := strings.TrimSpace(r.URL.Query().Get("code"))
 		if code == "" {
-			rw.WriteHeader(http.StatusBadRequest)
-			c.logger.Debug("empty auth code parameter")
+			view.RenderError(rw, view.ErrorPage{
+				Status:   http.StatusBadRequest,
+				Title:    "Installation was not completed",
+				Message:  "Pipedrive did not return an authorization code. Please install the app again.",
+				RetryURL: installURL,
+			})
 			return
 		}
 
@@ -95,15 +100,15 @@ func (c AuthController) BuildGetAuth() http.HandlerFunc {
 
 		token, err := c.pipedriveAuth.GetAccessToken(ctx, code, c.credentials.RedirectURL)
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
 			c.logger.Errorf("could not get pipedrive access token: %s", err.Error())
+			view.RenderError(rw, tokenErrorPage(err))
 			return
 		}
 
 		usr, err := c.pipedriveAPI.GetMe(ctx, token)
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
 			c.logger.Errorf("could not get pipedrive user: %s", err.Error())
+			view.RenderError(rw, upstreamErrorPage(err))
 			return
 		}
 
@@ -127,17 +132,17 @@ func (c AuthController) BuildGetAuth() http.HandlerFunc {
 		); err != nil {
 			c.logger.Errorf("could not get user access info: %s", err.Error())
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				rw.WriteHeader(http.StatusRequestTimeout)
+				view.RenderError(rw, view.ErrorPage{Status: http.StatusRequestTimeout, RetryURL: installURL})
 				return
 			}
 
 			microErr := response.MicroError{}
 			if err := json.Unmarshal([]byte(err.Error()), &microErr); err != nil {
-				rw.WriteHeader(http.StatusUnauthorized)
+				view.RenderError(rw, view.ErrorPage{Status: http.StatusInternalServerError, RetryURL: installURL})
 				return
 			}
 
-			rw.WriteHeader(microErr.Code)
+			view.RenderError(rw, view.ErrorPage{Status: microErr.Code, RetryURL: installURL})
 			return
 		}
 
