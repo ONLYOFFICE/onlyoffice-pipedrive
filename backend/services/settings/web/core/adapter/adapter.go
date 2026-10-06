@@ -26,7 +26,7 @@ import (
 func BuildNewSettingsAdapter(config *config.StorageConfig) port.DocSettingsServiceAdapter {
 	adapter := NewMemoryDocserverAdapter()
 	if config.Storage.URL != "" {
-		adapter = NewMongoDocserverAdapter(config.Storage.URL)
+		adapter = NewMongoDocserverAdapter(config.Storage.URL, config.Storage.DB)
 	}
 
 	return adapter

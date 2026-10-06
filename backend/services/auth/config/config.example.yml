@@ -6,6 +6,7 @@ repl_address: ":5053"
 debug: false
 storage:
   url: ""
+  db: "pipedrive"
   type: 1
 registry:
   addresses: [""]

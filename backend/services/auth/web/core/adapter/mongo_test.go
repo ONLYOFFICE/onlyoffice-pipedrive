@@ -37,7 +37,7 @@ var user = domain.UserAccess{
 }
 
 func TestMongoAdapter(t *testing.T) {
-	adapter := NewMongoUserAdapter("mongodb://localhost:27017")
+	adapter := NewMongoUserAdapter("mongodb://localhost:27017", "")
 
 	t.Run("save user with timeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)

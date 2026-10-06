@@ -28,7 +28,7 @@ import (
 func BuildNewAICodeAccessAdapter(config *config.StorageConfig, encryptor crypto.Encryptor, credentials *oauth2.Config) port.AICodeAccessServiceAdapter {
 	adapter := NewMemoryAICodeAccessAdapter()
 	if config.Storage.URL != "" {
-		adapter = NewMongoAICodeAccessAdapter(config.Storage.URL, encryptor, credentials)
+		adapter = NewMongoAICodeAccessAdapter(config.Storage.URL, config.Storage.DB, encryptor, credentials)
 	}
 
 	return adapter

@@ -34,7 +34,7 @@ var settings = domain.DocSettings{
 }
 
 func TestMongoAdapter(t *testing.T) {
-	adapter := NewMongoDocserverAdapter("mongodb://localhost:27017")
+	adapter := NewMongoDocserverAdapter("mongodb://localhost:27017", "")
 
 	t.Run("save settings with timeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)

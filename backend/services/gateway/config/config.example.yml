@@ -4,6 +4,10 @@ version: 0
 address: ":6044"
 repl_address: ":9999"
 debug: false
+storage:
+  url: ""
+  db: "pipedrive"
+  type: 1
 registry:
   addresses: [""]
   type: 2
