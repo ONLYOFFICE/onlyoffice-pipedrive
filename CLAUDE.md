@@ -1,81 +1,52 @@
 # CLAUDE.md - ONLYOFFICE Pipedrive integration
 
-## Project Overview
-
-ONLYOFFICE app for Pipedrive: adds ONLYOFFICE Docs editors to Pipedrive deals. It is a monorepo with a Go microservices backend (`backend/`, single Go module `github.com/ONLYOFFICE/onlyoffice-pipedrive`) and a React/TypeScript frontend (`frontend/`) loaded inside Pipedrive via `@pipedrive/app-extensions-sdk` (custom modals / panels).
+ONLYOFFICE app for Pipedrive (Marketplace app): ONLYOFFICE Docs editors for files attached to Pipedrive deals. Monorepo: Go microservices in `backend/` (one module `github.com/ONLYOFFICE/onlyoffice-pipedrive`) + React/TS frontend in `frontend/`, which runs inside Pipedrive iframes via `@pipedrive/app-extensions-sdk`. Background, history, deploy and gotchas: see `HANDOVER.md`. Releases: `/release` skill.
 
 ## Setup
 
-Submodules are required — the backend will not compile without them because of `//go:embed` directives:
-
 ```bash
-git submodule update --init --recursive
+git submodule update --init --recursive          # required: //go:embed needs submodules
+cd backend/services/gateway/assets/aiautofill && make install-tools && make   # builds gitignored aiautofill/build, needed by gateway
 ```
 
-- `backend/services/shared/format` - document-formats (`shared/formats.go` embeds `format/onlyoffice-docs-formats.json`)
-- `backend/services/gateway/assets/assets` - document-templates (`gateway/assets/embed.go`, blank files for "create")
-- `backend/services/gateway/assets/aiautofill` - plugin-aiautofill (`gateway/assets/plugin.go` embeds `aiautofill/build`)
-- `frontend/src/assets/document-formats` - document-formats
-
-`aiautofill/build` is a generated (gitignored) directory; build it before compiling the gateway:
-
-```bash
-cd backend/services/gateway/assets/aiautofill && make install-tools && make
-```
-
-CI workflows (`build.yaml`, `licenses.yml`) run this same step - any new workflow that compiles the backend needs it too.
+Submodules: `backend/services/shared/format` + `frontend/src/assets/document-formats` (document-formats), `backend/services/gateway/assets/assets` (document-templates, branch `main/new`), `backend/services/gateway/assets/aiautofill` (plugin-aiautofill).
 
 ## Commands
 
-Backend (run from `backend/`):
+Backend (from `backend/`, Go 1.25):
 
 ```bash
 go build ./...
-go test ./...
-go test ./services/auth/web/core/service -run TestName   # single test
-go run services/gateway/main.go server -c <path/to/config.yml>
+go test ./services/gateway/web/middleware/ ./services/callback/... ./services/builder/...   # smoke tests, no external deps
+go test ./services/auth/web/core/service -run TestName                                     # single test
+go run services/gateway/main.go server -c services/gateway/config/config.yml
 ```
 
-Mongo adapter tests (`*/core/adapter/mongo_test.go`) connect to `mongodb://localhost:27017` and need a local MongoDB.
+- `*/core/adapter/mongo_test.go` need MongoDB on `localhost:27017`, otherwise they hang - don't run `go test ./...` without it.
+- `TestSelectCaching` (auth handler) and `TestUserService/*timeout*` currently fail on `develop` - pre-existing, not caused by your change.
 
-Frontend (run from `frontend/`, yarn):
+Frontend (from `frontend/`, Node 22, Yarn 1): `yarn install`, `yarn start:dev` (:3000), `yarn build`, `yarn eslint:fix`. No frontend tests exist (`yarn test` passes with none).
 
-```bash
-yarn install
-yarn start:dev        # webpack dev server on :3000
-yarn build            # production build to frontend/build
-yarn test             # jest
-yarn test -- -t "name" # single test
-yarn eslint:fix
-```
+Frontend build-time env (`frontend/.env` / Docker build args): `BACKEND_GATEWAY`, `PIPEDRIVE_CREATE_MODAL_ID`. They are baked into the bundle - a frontend image is tied to one environment.
 
-Frontend build-time env (`frontend/.env`, via dotenv-webpack / Docker build args): `BACKEND_GATEWAY`, `PIPEDRIVE_CREATE_MODAL_ID`, `PIPEDRIVE_EDITOR_MODAL_ID`.
+## Architecture (short)
 
-Docker: `Dockerfile` is multi-stage with one target per service (`gateway`, `auth`, `builder`, `callback`, `settings`, `frontend`); `docker-compose build` builds them all.
+- **gateway** (HTTP, chi, `:6044` local / `:4044` in Docker) - routes in `gateway/web/server.go`: `/oauth/*`, `/api/*`, `/files/*`, `/plugins/aiautofill/*`. `middleware/context.go` verifies the Pipedrive iframe JWT (`X-Pipedrive-App-Context`, signed with `client_secret`); `middleware/auth.go` - Basic auth for the uninstall webhook.
+- **auth** (RPC) - OAuth tokens per user; **settings** (RPC) - per-company Document Server settings; **builder** (RPC) - signed editor config; **callback** (HTTP) - Docs save callback, uploads the file back to Pipedrive.
+- Bootstrapping: `main.go` -> `cmd/server.go` -> `pkg.NewBootstrapper(..., pkg.WithModules(...))` from `onlyoffice-integration-adapters` (fx-style DI). New dependency = constructor + register in that module list.
+- RPC: `client.Call(ctx, client.NewRequest("<namespace>:<service>", "<Handler>.<Method>", req), &resp)`, e.g. `"pipedrive:auth"`, `"UserSelectHandler.GetUser"`.
+- `auth`, `settings`, gateway access store: hexagonal `web/core/{domain,port,service,adapter}`; Mongo adapter when `storage.url` is set, otherwise in-memory.
+- `services/shared/`: config (YAML + `env:` overrides), Pipedrive clients, RPC DTOs, formats.
+- Frontend pages: `Main` (deal panel), `Creation` (custom modal), `Settings`, `Editor` (opens in a new browser tab, not a modal). Path aliases in `tsconfig.paths.json`.
 
-## Backend architecture
+## Rules
 
-Five services under `backend/services/`, all bootstrapped the same way: `main.go` → `cmd.Run()` (urfave/cli) - `server` command - `pkg.NewBootstrapper(CONFIG_PATH, pkg.WithModules(...))` from `onlyoffice-integration-adapters`, which is a DI container (uber/fx-style constructors). To add a dependency, write a constructor and register it in the service's `cmd/server.go` module list.
-
-- **gateway** (HTTP, chi) — public entry point for the frontend and Pipedrive. Routes in `gateway/web/server.go`: `/oauth/*` (install/auth/uninstall), `/api/*` (me, config, settings), `/files/*` (create from template, download, form check), `/plugins/aiautofill/*` (serves the embedded AI Autofill plugin). `middleware/context.go` validates the Pipedrive iframe JWT; `middleware/auth.go` protects uninstall. Also owns the AI access-code store (`web/core/`) used by the autofill plugin's `/api/data` endpoint.
-- **auth** (go-micro RPC) — stores Pipedrive OAuth users/tokens and refreshes them. Handlers: `UserSelectHandler`, `UserInsertHandler`, `UserDeleteHandler`.
-- **settings** (go-micro RPC) — per-company Document Server settings (address, secret, etc.). Handlers: `SettingsSelectHandler`, `SettingsInsertHandler`, `SettingsDeleteHandler`.
-- **builder** (go-micro RPC) — builds the signed ONLYOFFICE editor config (fetches user + settings in parallel, signs with the Document Server JWT secret).
-- **callback** (HTTP) — `POST /callback` receives ONLYOFFICE Document Server save callbacks and uploads the file back to Pipedrive.
-
-Inter-service calls use go-micro: `client.Call(ctx, client.NewRequest("<namespace>:<service>", "<Handler>.<Method>", req), &resp)`, e.g. `"pipedrive:auth"`, `"UserSelectHandler.GetUser"`. Service names come from `namespace`/`name` in each service's config.
-
-`auth`, `settings`, and gateway's access store follow a hexagonal layout under `web/core/`: `domain/` (entities), `port/` (interfaces), `service/` (business logic), `adapter/` (memory + Mongo implementations; `BuildNew*Adapter` picks Mongo when `storage.url` is set, else in-memory). RPC handlers use `singleflight` to dedupe concurrent lookups.
-
-`services/shared/` holds cross-service code: config structs (`config.go`, YAML + env overrides via `env:` tags such as `CREDENTIALS_CLIENT_ID`, `ONLYOFFICE_*`), Pipedrive API/OAuth clients (`client/`), RPC request/response DTOs (`request/`, `response/`), and supported file formats.
-
-Config: each service has `config/config.example.yml`; `config.yml` is gitignored and holds local values.
-
-## Frontend architecture
-
-React 19 + TypeScript, webpack, Tailwind, react-router, TanStack Query, valtio, i18next (locales in `src/assets/locales`). Path aliases (`@pages`, `@components`, `@context`, ...) are defined in `tsconfig.paths.json`. Pages map to Pipedrive surfaces: `Main` (deal panel file list), `Creation` (create/upload modal), `Editor` (editor modal using `@onlyoffice/document-editor-react`), `Settings`. `TokenContext` obtains the Pipedrive SDK token that is sent to the gateway; `src/services/` wraps gateway API calls.
-
-## Conventions
-
-- Every source file starts with the Apache-2.0 "(c) Copyright Ascensio System SIA" header — keep it on new files. The `Licenses` workflow checks dependency licenses for both `backend/` and `frontend/`.
-- Branches: work on `develop`; `master` is the release branch. Pushes to `develop` build RC Docker images (version from `CHANGELOG.md`), so update `CHANGELOG.md` for user-facing changes.
+- Do not change the user key format `fmt.Sprint(userID + companyID)` (a numeric **sum**) - it is the primary key of stored tokens and is used in auth, builder, callback, uninstall. Changing it needs a data migration.
+- All services must get the same `CREDENTIALS_CLIENT_ID/SECRET` - the secret is also the key for the iframe JWT.
+- Keep the demo-mode rule (enabled and `DemoStarted` empty or < 30 days) identical in builder, callback and gateway `api.go`.
+- Do not remove `python3`/`kubernetes` from runtime images in `Dockerfile` - DevOps tooling uses them.
+- Never commit `config.yml` or `frontend/.env` (gitignored, contain secrets).
+- Every source file starts with the Apache-2.0 "(c) Copyright Ascensio System SIA" header.
+- New dependencies must pass the `Licenses` workflow; manual approvals go to `frontend/.check-licenses.yml`.
+- Branch from `develop`; `master` = releases. Pushes to `develop` build RC images (version from `CHANGELOG.md`) - update `CHANGELOG.md` for user-facing changes.
+- Any new CI workflow that compiles the backend must init submodules and build aiautofill first.
